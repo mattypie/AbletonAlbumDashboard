@@ -43,6 +43,15 @@ export type Database = {
           is_primary?: boolean;
           track_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "actions_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       bottlenecks: {
         Row: {
@@ -72,6 +81,15 @@ export type Database = {
           resolved_at?: string | null;
           track_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "bottlenecks_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       sessions: {
         Row: {
@@ -108,6 +126,22 @@ export type Database = {
           still_broken?: string | null;
           track_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "sessions_action_id_fkey";
+            columns: ["action_id"];
+            isOneToOne: false;
+            referencedRelation: "actions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sessions_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       track_stages: {
         Row: {
@@ -128,6 +162,15 @@ export type Database = {
           stage_key?: string;
           track_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "track_stages_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       track_versions: {
         Row: {
@@ -154,6 +197,15 @@ export type Database = {
           storage_path?: string;
           track_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "track_versions_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       tracks: {
         Row: {
@@ -192,11 +244,20 @@ export type Database = {
           tags?: string[];
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 };
