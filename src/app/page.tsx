@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTracksByStatus } from "@/lib/data/tracks";
+import { getAlbumSettings } from "@/lib/data/album";
 import { recommendTrack } from "@/lib/recommend";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
@@ -83,9 +84,10 @@ export default async function DashboardPage({
   const sp = (await searchParams) ?? {};
   const sort: SortValue = isSortValue(sp.sort) ? sp.sort : "recommended";
 
-  const [active, sessionCounts] = await Promise.all([
+  const [active, sessionCounts, album] = await Promise.all([
     getTracksByStatus("active"),
     fetchSessionsLast7DaysByTrack(),
+    getAlbumSettings(),
   ]);
   const recommendation = recommendTrack(active, sessionCounts);
 
@@ -104,13 +106,31 @@ export default async function DashboardPage({
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {greeting}, producer.
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Focus on finishing, not starting.
-          </p>
+        <div className="flex items-start gap-4">
+          {album?.cover_image_url && (
+            <Link
+              href="/settings"
+              className="h-16 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2"
+              aria-label="Edit album cover"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={album.cover_image_url}
+                alt={album.title ?? "Album cover"}
+                className="h-full w-full object-cover"
+              />
+            </Link>
+          )}
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {greeting}, producer.
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              {album?.title
+                ? `Working on “${album.title}”.`
+                : "Focus on finishing, not starting."}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground">

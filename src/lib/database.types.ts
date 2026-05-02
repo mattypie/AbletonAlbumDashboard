@@ -12,6 +12,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      album_settings: {
+        Row: {
+          cover_image_url: string | null;
+          owner_id: string;
+          title: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          cover_image_url?: string | null;
+          owner_id: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          cover_image_url?: string | null;
+          owner_id?: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       actions: {
         Row: {
           category: string | null;
