@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { CoverImageUpload } from "@/components/cover-image-upload";
 import { createTrack } from "@/app/actions/tracks";
 import { countActiveTracks } from "@/lib/data/tracks";
 import { MAX_ACTIVE_TRACKS } from "@/lib/types";
@@ -52,12 +53,10 @@ export default async function NewTrackPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="cover_image_url">Cover image URL (optional)</Label>
-              <Input
-                id="cover_image_url"
+              <Label>Cover image</Label>
+              <CoverImageUpload
                 name="cover_image_url"
-                placeholder="https://…"
-                type="url"
+                pathPrefix="covers/new"
               />
             </div>
 
