@@ -23,12 +23,14 @@ export function LibraryPagination({
   totalItems,
   pageSize,
   onPageChange,
+  unit = "items",
 }: {
   page: number;
   totalPages: number;
   totalItems: number;
   pageSize: number;
   onPageChange: (next: number) => void;
+  unit?: string;
 }) {
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(totalItems, page * pageSize);
@@ -37,7 +39,7 @@ export function LibraryPagination({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-muted-foreground">
       <div>
-        Showing {start}–{end} of {totalItems} items
+        Showing {start}–{end} of {totalItems} {unit}
       </div>
       <div className="flex items-center gap-1">
         <button
