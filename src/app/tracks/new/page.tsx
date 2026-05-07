@@ -53,6 +53,30 @@ export default async function NewTrackPage() {
               </p>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="song_key">Key</Label>
+                <Input
+                  id="song_key"
+                  name="song_key"
+                  placeholder="e.g. Am, F#m, C"
+                  maxLength={20}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="bpm">BPM</Label>
+                <Input
+                  id="bpm"
+                  name="bpm"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={999}
+                  placeholder="e.g. 140"
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Label>Cover image</Label>
               <CoverImageUpload

@@ -4,7 +4,7 @@ import { MoreVertical } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ProgressRing, toneForProgress } from "@/components/ui/progress-ring";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +29,14 @@ export function TrackCard({
   recommended?: boolean;
 }) {
   const progress = progressFromStages(track.stages);
-  const tone = toneForProgress(progress);
   const [genre, ...descriptors] = track.tags;
   const lastWorkedLabel = track.last_worked_at
     ? `Last worked: ${format(new Date(track.last_worked_at), "MMM d, yyyy")}`
     : "Never worked on yet";
+  const meta = [
+    track.song_key ? track.song_key : null,
+    track.bpm ? `${track.bpm} BPM` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <Card
@@ -69,6 +72,11 @@ export function TrackCard({
             <Badge variant="primary">{genre}</Badge>
           </div>
         )}
+        {meta.length > 0 && (
+          <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
+            {meta.join(" · ")}
+          </p>
+        )}
         {descriptors.length > 0 && (
           <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">
             {descriptors.join(", ")}
@@ -83,7 +91,7 @@ export function TrackCard({
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Progress
         </span>
-        <ProgressRing value={progress} size={68} tone={tone} />
+        <ProgressRing value={progress} size={68} />
       </div>
 
       <div className="min-w-0">
