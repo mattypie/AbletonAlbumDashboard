@@ -7,11 +7,30 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import { MAX_ACTIVE_TRACKS, TRACK_STATUSES } from "@/lib/types";
 
+const optionalTrimmed = z
+  .string()
+  .optional()
+  .default("")
+  .transform((v) => v.trim());
+
+const optionalBpm = z
+  .string()
+  .optional()
+  .default("")
+  .transform((v) => v.trim())
+  .refine(
+    (v) => v === "" || (/^\d+$/.test(v) && Number(v) > 0 && Number(v) < 1000),
+    "BPM must be a positive number under 1000",
+  )
+  .transform((v) => (v === "" ? null : Number(v)));
+
 const createSchema = z.object({
   name: z.string().min(1, "Name is required").max(120),
   tags: z.string().optional().default(""),
   cover_image_url: z.string().url().optional().or(z.literal("")),
   status: z.enum(["active", "backlog"]).default("active"),
+  song_key: optionalTrimmed.pipe(z.string().max(20)),
+  bpm: optionalBpm,
 });
 
 function parseTags(raw: string): string[] {
@@ -27,6 +46,8 @@ export async function createTrack(formData: FormData) {
     tags: formData.get("tags") ?? "",
     cover_image_url: formData.get("cover_image_url") ?? "",
     status: formData.get("status") ?? "active",
+    song_key: formData.get("song_key") ?? "",
+    bpm: formData.get("bpm") ?? "",
   });
 
   const supabase = getServerSupabase();
@@ -52,6 +73,8 @@ export async function createTrack(formData: FormData) {
       tags: parseTags(parsed.tags),
       cover_image_url: parsed.cover_image_url || null,
       status: parsed.status,
+      song_key: parsed.song_key || null,
+      bpm: parsed.bpm,
     })
     .select("id")
     .single();
@@ -68,6 +91,8 @@ const updateSchema = z.object({
   tags: z.string().optional().default(""),
   cover_image_url: z.string().url().optional().or(z.literal("")),
   als_file_path: z.string().max(1000).optional().default(""),
+  song_key: optionalTrimmed.pipe(z.string().max(20)),
+  bpm: optionalBpm,
 });
 
 export async function updateTrack(formData: FormData) {
@@ -77,6 +102,8 @@ export async function updateTrack(formData: FormData) {
     tags: formData.get("tags") ?? "",
     cover_image_url: formData.get("cover_image_url") ?? "",
     als_file_path: formData.get("als_file_path") ?? "",
+    song_key: formData.get("song_key") ?? "",
+    bpm: formData.get("bpm") ?? "",
   });
   const supabase = getServerSupabase();
   const { error } = await supabase
@@ -86,6 +113,8 @@ export async function updateTrack(formData: FormData) {
       tags: parseTags(parsed.tags),
       cover_image_url: parsed.cover_image_url || null,
       als_file_path: parsed.als_file_path.trim() || null,
+      song_key: parsed.song_key || null,
+      bpm: parsed.bpm,
     })
     .eq("owner_id", OWNER_ID)
     .eq("id", parsed.id);

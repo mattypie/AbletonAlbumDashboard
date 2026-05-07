@@ -288,6 +288,7 @@ export type Database = {
       tracks: {
         Row: {
           als_file_path: string | null;
+          bpm: number | null;
           cover_image_url: string | null;
           created_at: string;
           id: string;
@@ -295,12 +296,14 @@ export type Database = {
           name: string;
           notes: string;
           owner_id: string;
+          song_key: string | null;
           status: string;
           tags: string[];
           updated_at: string;
         };
         Insert: {
           als_file_path?: string | null;
+          bpm?: number | null;
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
@@ -308,12 +311,14 @@ export type Database = {
           name: string;
           notes?: string;
           owner_id: string;
+          song_key?: string | null;
           status: string;
           tags?: string[];
           updated_at?: string;
         };
         Update: {
           als_file_path?: string | null;
+          bpm?: number | null;
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
@@ -321,6 +326,7 @@ export type Database = {
           name?: string;
           notes?: string;
           owner_id?: string;
+          song_key?: string | null;
           status?: string;
           tags?: string[];
           updated_at?: string;

@@ -34,6 +34,10 @@ export default async function TrackDetailPage({
   if (!track) notFound();
 
   const [genre, ...descriptors] = track.tags;
+  const meta = [
+    track.song_key ? track.song_key : null,
+    track.bpm ? `${track.bpm} BPM` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,6 +79,11 @@ export default async function TrackDetailPage({
               {genre && <Badge variant="primary">{genre}</Badge>}
               <Badge variant="default">{track.status}</Badge>
             </div>
+            {meta.length > 0 && (
+              <p className="text-sm font-medium text-foreground/85 tabular-nums">
+                {meta.join(" · ")}
+              </p>
+            )}
             {descriptors.length > 0 && (
               <p className="text-sm text-muted-foreground">
                 {descriptors.join(", ")}
