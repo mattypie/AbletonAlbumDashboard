@@ -1,6 +1,7 @@
 # Finish Five
 
 > Five tracks. One focus. Finish them.
+<img width="1715" height="1099" alt="image" src="https://github.com/user-attachments/assets/544d2a20-c8d3-4665-bd1d-d2759565f6be" />
 
 A focused songwriting/production tracker built around a single constraint:
 **only five tracks can be active at a time.** Everything else lives in the
