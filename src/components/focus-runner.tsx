@@ -8,16 +8,28 @@ import {
   SessionLogDialog,
   type SessionDraft,
 } from "@/components/session-log-dialog";
-import type { ActionRow, TrackRow } from "@/lib/types";
+import { SessionCompleteDialog } from "@/components/calendar/session-complete-dialog";
+import type {
+  ActionRow,
+  CalendarSessionRow,
+  SessionTypeRow,
+  TrackRow,
+} from "@/lib/types";
 
 type Phase = "idle" | "running" | "paused" | "stopped";
 
 export function FocusRunner({
   track,
   primaryAction,
+  plannedSession,
+  sessionTypes,
+  tracks,
 }: {
   track: TrackRow;
   primaryAction: ActionRow | null;
+  plannedSession?: CalendarSessionRow | null;
+  sessionTypes?: SessionTypeRow[];
+  tracks?: TrackRow[];
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -77,6 +89,8 @@ export function FocusRunner({
     setDraft(null);
   };
 
+  const useEnhancedDialog = !!plannedSession && !!sessionTypes && !!tracks;
+
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10 text-center">
       <div className="flex w-full justify-start">
@@ -90,7 +104,7 @@ export function FocusRunner({
 
       <div className="flex flex-col gap-3">
         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Focus
+          {plannedSession?.session_type?.name ?? "Focus"}
         </div>
         <h1 className="text-4xl font-semibold tracking-tight">{track.name}</h1>
         <p className="text-lg text-muted-foreground">
@@ -98,6 +112,19 @@ export function FocusRunner({
             ? primaryAction.description
             : "No primary action — set one to anchor the session."}
         </p>
+        {plannedSession && plannedSession.todos.length > 0 && (
+          <ul className="mx-auto mt-2 flex max-w-md flex-col gap-1 text-left text-sm">
+            {plannedSession.todos.map((t) => (
+              <li
+                key={t.id}
+                className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1"
+              >
+                <span className="h-3 w-3 rounded-sm border border-border" />
+                {t.description}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="font-mono text-7xl tabular-nums">
@@ -148,19 +175,26 @@ export function FocusRunner({
         )}
       </div>
 
-      <SessionLogDialog
-        open={logOpen}
-        onOpenChange={(o) => {
-          setLogOpen(o);
-          if (!o && phase === "stopped") {
-            // user closed without saving — stay in stopped phase to allow re-open
-          }
-        }}
-        trackId={track.id}
-        primaryAction={primaryAction}
-        draft={draft}
-        redirectTo="/"
-      />
+      {useEnhancedDialog ? (
+        <SessionCompleteDialog
+          open={logOpen}
+          onOpenChange={setLogOpen}
+          session={plannedSession ?? null}
+          draft={draft}
+          sessionTypes={sessionTypes!}
+          tracks={tracks!}
+          redirectTo="/calendar"
+        />
+      ) : (
+        <SessionLogDialog
+          open={logOpen}
+          onOpenChange={setLogOpen}
+          trackId={track.id}
+          primaryAction={primaryAction}
+          draft={draft}
+          redirectTo="/"
+        />
+      )}
     </div>
   );
 }

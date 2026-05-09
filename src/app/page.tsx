@@ -27,6 +27,7 @@ async function fetchSessionsLast7DaysByTrack() {
     .gte("started_at", since.toISOString());
   const map = new Map<string, number>();
   (data ?? []).forEach((row) => {
+    if (!row.track_id) return;
     map.set(row.track_id, (map.get(row.track_id) ?? 0) + 1);
   });
   return map;
