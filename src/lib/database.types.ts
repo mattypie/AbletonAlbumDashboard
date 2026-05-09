@@ -12,27 +12,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      album_settings: {
-        Row: {
-          cover_image_url: string | null;
-          owner_id: string;
-          title: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          cover_image_url?: string | null;
-          owner_id: string;
-          title?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          cover_image_url?: string | null;
-          owner_id?: string;
-          title?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       actions: {
         Row: {
           category: string | null;
@@ -74,6 +53,27 @@ export type Database = {
           },
         ];
       };
+      album_settings: {
+        Row: {
+          cover_image_url: string | null;
+          owner_id: string;
+          title: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          cover_image_url?: string | null;
+          owner_id: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          cover_image_url?: string | null;
+          owner_id?: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       bottlenecks: {
         Row: {
           category: string;
@@ -112,40 +112,231 @@ export type Database = {
           },
         ];
       };
+      session_recurrences: {
+        Row: {
+          active_from: string;
+          active_until: string | null;
+          created_at: string;
+          duration_minutes: number;
+          id: string;
+          owner_id: string;
+          session_type_id: string | null;
+          start_time: string;
+          template_id: string | null;
+          track_id: string | null;
+          weekday: number;
+        };
+        Insert: {
+          active_from?: string;
+          active_until?: string | null;
+          created_at?: string;
+          duration_minutes: number;
+          id?: string;
+          owner_id: string;
+          session_type_id?: string | null;
+          start_time: string;
+          template_id?: string | null;
+          track_id?: string | null;
+          weekday: number;
+        };
+        Update: {
+          active_from?: string;
+          active_until?: string | null;
+          created_at?: string;
+          duration_minutes?: number;
+          id?: string;
+          owner_id?: string;
+          session_type_id?: string | null;
+          start_time?: string;
+          template_id?: string | null;
+          track_id?: string | null;
+          weekday?: number;
+        };
+        Relationships: [];
+      };
+      session_template_todos: {
+        Row: {
+          description: string;
+          id: string;
+          sort_order: number;
+          template_id: string;
+        };
+        Insert: {
+          description: string;
+          id?: string;
+          sort_order?: number;
+          template_id: string;
+        };
+        Update: {
+          description?: string;
+          id?: string;
+          sort_order?: number;
+          template_id?: string;
+        };
+        Relationships: [];
+      };
+      session_templates: {
+        Row: {
+          created_at: string;
+          default_duration_minutes: number;
+          default_notes_md: string | null;
+          id: string;
+          name: string;
+          owner_id: string;
+          session_type_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          default_duration_minutes?: number;
+          default_notes_md?: string | null;
+          id?: string;
+          name: string;
+          owner_id: string;
+          session_type_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          default_duration_minutes?: number;
+          default_notes_md?: string | null;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          session_type_id?: string | null;
+        };
+        Relationships: [];
+      };
+      session_todos: {
+        Row: {
+          carried_from: string | null;
+          created_at: string;
+          description: string;
+          done: boolean;
+          done_at: string | null;
+          id: string;
+          session_id: string;
+          sort_order: number;
+        };
+        Insert: {
+          carried_from?: string | null;
+          created_at?: string;
+          description: string;
+          done?: boolean;
+          done_at?: string | null;
+          id?: string;
+          session_id: string;
+          sort_order?: number;
+        };
+        Update: {
+          carried_from?: string | null;
+          created_at?: string;
+          description?: string;
+          done?: boolean;
+          done_at?: string | null;
+          id?: string;
+          session_id?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      session_types: {
+        Row: {
+          color: string;
+          created_at: string;
+          icon: string | null;
+          id: string;
+          is_archived: boolean;
+          name: string;
+          owner_id: string;
+          requires_track: boolean;
+          sort_order: number;
+        };
+        Insert: {
+          color: string;
+          created_at?: string;
+          icon?: string | null;
+          id?: string;
+          is_archived?: boolean;
+          name: string;
+          owner_id: string;
+          requires_track?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          icon?: string | null;
+          id?: string;
+          is_archived?: boolean;
+          name?: string;
+          owner_id?: string;
+          requires_track?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       sessions: {
         Row: {
           action_id: string | null;
           created_at: string;
           duration_seconds: number | null;
-          ended_at: string;
+          ended_at: string | null;
+          energy_rating: number | null;
+          enjoyment_rating: number | null;
           id: string;
           improved: string | null;
           new_bottleneck: string | null;
-          started_at: string;
+          notes_md: string | null;
+          planned_end: string | null;
+          planned_start: string | null;
+          recurrence_id: string | null;
+          session_type_id: string | null;
+          started_at: string | null;
+          status: string;
           still_broken: string | null;
-          track_id: string;
+          template_id: string | null;
+          track_id: string | null;
         };
         Insert: {
           action_id?: string | null;
           created_at?: string;
-          ended_at: string;
+          duration_seconds?: number | null;
+          ended_at?: string | null;
+          energy_rating?: number | null;
+          enjoyment_rating?: number | null;
           id?: string;
           improved?: string | null;
           new_bottleneck?: string | null;
-          started_at: string;
+          notes_md?: string | null;
+          planned_end?: string | null;
+          planned_start?: string | null;
+          recurrence_id?: string | null;
+          session_type_id?: string | null;
+          started_at?: string | null;
+          status?: string;
           still_broken?: string | null;
-          track_id: string;
+          template_id?: string | null;
+          track_id?: string | null;
         };
         Update: {
           action_id?: string | null;
           created_at?: string;
-          ended_at?: string;
+          duration_seconds?: number | null;
+          ended_at?: string | null;
+          energy_rating?: number | null;
+          enjoyment_rating?: number | null;
           id?: string;
           improved?: string | null;
           new_bottleneck?: string | null;
-          started_at?: string;
+          notes_md?: string | null;
+          planned_end?: string | null;
+          planned_start?: string | null;
+          recurrence_id?: string | null;
+          session_type_id?: string | null;
+          started_at?: string | null;
+          status?: string;
           still_broken?: string | null;
-          track_id?: string;
+          template_id?: string | null;
+          track_id?: string | null;
         };
         Relationships: [
           {
@@ -330,6 +521,33 @@ export type Database = {
           status?: string;
           tags?: string[];
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      weekly_reviews: {
+        Row: {
+          created_at: string;
+          intention: string;
+          owner_id: string;
+          reflection: string;
+          updated_at: string;
+          week_start: string;
+        };
+        Insert: {
+          created_at?: string;
+          intention?: string;
+          owner_id: string;
+          reflection?: string;
+          updated_at?: string;
+          week_start: string;
+        };
+        Update: {
+          created_at?: string;
+          intention?: string;
+          owner_id?: string;
+          reflection?: string;
+          updated_at?: string;
+          week_start?: string;
         };
         Relationships: [];
       };

@@ -6,6 +6,32 @@ export type BottleneckRow = Database["public"]["Tables"]["bottlenecks"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 export type VersionRow = Database["public"]["Tables"]["track_versions"]["Row"];
+export type SessionTypeRow =
+  Database["public"]["Tables"]["session_types"]["Row"];
+export type SessionTodoRow =
+  Database["public"]["Tables"]["session_todos"]["Row"];
+export type SessionTemplateRow =
+  Database["public"]["Tables"]["session_templates"]["Row"];
+export type SessionTemplateTodoRow =
+  Database["public"]["Tables"]["session_template_todos"]["Row"];
+export type SessionRecurrenceRow =
+  Database["public"]["Tables"]["session_recurrences"]["Row"];
+export type WeeklyReviewRow =
+  Database["public"]["Tables"]["weekly_reviews"]["Row"];
+
+export const SESSION_STATUSES = [
+  "planned",
+  "in_progress",
+  "completed",
+  "skipped",
+] as const;
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
+
+export type CalendarSessionRow = SessionRow & {
+  session_type: SessionTypeRow | null;
+  track: { id: string; name: string; cover_image_url: string | null } | null;
+  todos: SessionTodoRow[];
+};
 
 export const TRACK_STATUSES = [
   "active",

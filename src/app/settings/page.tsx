@@ -1,4 +1,10 @@
-import { Disc3 } from "lucide-react";
+import Link from "next/link";
+import {
+  CalendarClock,
+  Disc3,
+  LayoutTemplate,
+  Repeat,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,11 +66,65 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 text-primary" />
+            Calendar planning
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-3">
+          <SettingsTile
+            href="/settings/session-types"
+            icon={CalendarClock}
+            title="Session types"
+            description="Categories shown on the calendar (Sound Design, Arrangement, etc.) with colors."
+          />
+          <SettingsTile
+            href="/settings/session-templates"
+            icon={LayoutTemplate}
+            title="Session templates"
+            description="Reusable session shapes with default duration and todo lists."
+          />
+          <SettingsTile
+            href="/settings/recurring-blocks"
+            icon={Repeat}
+            title="Recurring blocks"
+            description="Auto-populate the calendar each week (e.g., every Tue 9–11am)."
+          />
+        </CardContent>
+      </Card>
+
       <ComingSoon
         icon={SettingsIcon}
         title="Preferences"
         description="Default focus duration, recommendation weights, and display preferences. (Single-user app, no auth.)"
       />
     </div>
+  );
+}
+
+function SettingsTile({
+  href,
+  icon: Icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: typeof CalendarClock;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col gap-1 rounded-md border border-border bg-surface p-3 text-sm transition-colors hover:bg-surface-2"
+    >
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-primary" />
+        <span className="font-medium">{title}</span>
+      </div>
+      <span className="text-xs text-muted-foreground">{description}</span>
+    </Link>
   );
 }
