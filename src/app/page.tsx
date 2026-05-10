@@ -120,10 +120,10 @@ export default async function DashboardPage({
             </Link>
           )}
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               {greeting}, producer.
             </h1>
-            <p className="mt-1 text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground md:text-base">
               {album?.title
                 ? `Working on “${album.title}”.`
                 : "Focus on finishing, not starting."}
@@ -131,7 +131,7 @@ export default async function DashboardPage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground md:inline-flex">
             <Sun className="h-3.5 w-3.5 text-warning" />
             {dateLabel}
           </span>
