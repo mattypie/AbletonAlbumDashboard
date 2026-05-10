@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { MoreVertical } from "lucide-react";
+import { ListChecks, MoreVertical } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,135 +39,222 @@ export function TrackCard({
   ].filter(Boolean) as string[];
 
   return (
-    <Card
-      className={cn(
-        "grid grid-cols-[88px_minmax(0,1.6fr)_auto_minmax(0,1.4fr)_minmax(0,1.4fr)] items-center gap-5 p-4",
-        recommended && "ring-1 ring-primary/40",
-      )}
-    >
-      <div className="relative h-20 w-20 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
-        {track.cover_image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={track.cover_image_url}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-xl font-bold text-foreground/30">
-            {track.name.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0">
+    <Card className={cn(recommended && "ring-1 ring-primary/40")}>
+      {/* Mobile layout (<md) */}
+      <div className="flex flex-col gap-3 p-4 md:hidden">
         <Link
-          href={`/tracks/${track.id}`}
-          className="text-base font-semibold leading-tight hover:underline"
+          href={`/m/${track.id}`}
+          className="flex items-center gap-3"
+          aria-label={`Open ${track.name}`}
         >
-          {track.name}
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+            {track.cover_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={track.cover_image_url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-base font-bold text-foreground/30">
+                {track.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-base font-semibold leading-tight">
+              {track.name}
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              {genre && <Badge variant="primary">{genre}</Badge>}
+              <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                {progress}%
+              </span>
+            </div>
+          </div>
+          <ProgressRing value={progress} size={44} />
         </Link>
-        {genre && (
-          <div className="mt-1.5">
-            <Badge variant="primary">{genre}</Badge>
+
+        {(track.bottleneck || track.primaryAction) && (
+          <div className="flex flex-col gap-1 text-xs">
+            {track.bottleneck && (
+              <p className="line-clamp-1 text-danger">
+                <span className="font-semibold">Blocker:</span>{" "}
+                {track.bottleneck.description}
+              </p>
+            )}
+            {track.primaryAction && (
+              <p className="line-clamp-1 text-muted-foreground">
+                <span className="font-semibold text-foreground">Next:</span>{" "}
+                {track.primaryAction.description}
+              </p>
+            )}
           </div>
         )}
-        {meta.length > 0 && (
-          <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
-            {meta.join(" · ")}
-          </p>
-        )}
-        {descriptors.length > 0 && (
-          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">
-            {descriptors.join(", ")}
-          </p>
-        )}
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          {lastWorkedLabel}
-        </p>
-      </div>
 
-      <div className="flex flex-col items-center gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Progress
-        </span>
-        <ProgressRing value={progress} size={68} />
-      </div>
-
-      <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Current Bottleneck
+        <div className="flex items-center gap-2">
+          <Button asChild className="h-11 flex-1">
+            <Link href={`/m/${track.id}`}>
+              <ListChecks className="h-4 w-4" />
+              Open tasks
+            </Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 shrink-0"
+                aria-label="Track actions"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/focus/${track.id}`}>Focus session</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/tracks/${track.id}`}>Open detail</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <TrackCardActions trackId={track.id} status={track.status} />
+              <DropdownMenuSeparator />
+              <DeleteTrackMenuItem trackId={track.id} trackName={track.name} />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        {track.bottleneck ? (
-          <>
-            <p
-              className={cn(
-                "mt-1 text-sm font-semibold leading-snug line-clamp-2",
-                "text-danger",
-              )}
-            >
-              {track.bottleneck.description}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-              {BOTTLENECK_LABELS[
-                track.bottleneck.category as keyof typeof BOTTLENECK_LABELS
-              ] ?? track.bottleneck.category}
-            </p>
-          </>
-        ) : (
-          <p className="mt-1 text-sm text-muted-foreground">
-            No active bottleneck
-          </p>
-        )}
       </div>
 
-      <div className="flex min-w-0 items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Next Action
-          </div>
-          {track.primaryAction ? (
-            <p className="mt-1 text-sm font-medium leading-snug line-clamp-2">
-              {track.primaryAction.description}
-            </p>
+      {/* Desktop layout (>=md) — unchanged */}
+      <div className="hidden md:grid md:grid-cols-[88px_minmax(0,1.6fr)_auto_minmax(0,1.4fr)_minmax(0,1.4fr)] md:items-center md:gap-5 md:p-4">
+        <div className="relative h-20 w-20 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+          {track.cover_image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={track.cover_image_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
           ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              No next action set
+            <div className="flex h-full items-center justify-center text-xl font-bold text-foreground/30">
+              {track.name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <Link
+            href={`/tracks/${track.id}`}
+            className="text-base font-semibold leading-tight hover:underline"
+          >
+            {track.name}
+          </Link>
+          {genre && (
+            <div className="mt-1.5">
+              <Badge variant="primary">{genre}</Badge>
+            </div>
+          )}
+          {meta.length > 0 && (
+            <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
+              {meta.join(" · ")}
             </p>
           )}
-          <Button
-            asChild
-            size="sm"
-            variant={recommended ? "default" : "outline"}
-            className="mt-2"
-          >
-            <Link href={`/focus/${track.id}`}>Continue</Link>
-          </Button>
+          {descriptors.length > 0 && (
+            <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">
+              {descriptors.join(", ")}
+            </p>
+          )}
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {lastWorkedLabel}
+          </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Progress
+          </span>
+          <ProgressRing value={progress} size={68} />
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Current Bottleneck
+          </div>
+          {track.bottleneck ? (
+            <>
+              <p
+                className={cn(
+                  "mt-1 text-sm font-semibold leading-snug line-clamp-2",
+                  "text-danger",
+                )}
+              >
+                {track.bottleneck.description}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                {BOTTLENECK_LABELS[
+                  track.bottleneck.category as keyof typeof BOTTLENECK_LABELS
+                ] ?? track.bottleneck.category}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              No active bottleneck
+            </p>
+          )}
+        </div>
+
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Next Action
+            </div>
+            {track.primaryAction ? (
+              <p className="mt-1 text-sm font-medium leading-snug line-clamp-2">
+                {track.primaryAction.description}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                No next action set
+              </p>
+            )}
             <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              aria-label="Track actions"
+              asChild
+              size="sm"
+              variant={recommended ? "default" : "outline"}
+              className="mt-2"
             >
-              <MoreVertical className="h-4 w-4" />
+              <Link href={`/focus/${track.id}`}>Continue</Link>
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/tracks/${track.id}`}>Open detail</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <TrackCardActions trackId={track.id} status={track.status} />
-            <DropdownMenuSeparator />
-            <DeleteTrackMenuItem trackId={track.id} trackName={track.name} />
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label="Track actions"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/tracks/${track.id}`}>Open detail</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <TrackCardActions trackId={track.id} status={track.status} />
+              <DropdownMenuSeparator />
+              <DeleteTrackMenuItem trackId={track.id} trackName={track.name} />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </Card>
   );

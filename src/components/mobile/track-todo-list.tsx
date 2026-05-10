@@ -124,15 +124,49 @@ export function TrackTodoList({
     });
   };
 
+  const openCount = optimistic.filter((t) => t.completed_at == null).length;
+
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        To-do
-      </h2>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          To-do
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          {openCount} open
+        </span>
+      </div>
+
+      <form
+        className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 p-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitDraft();
+        }}
+      >
+        <Plus className="ml-1 h-5 w-5 shrink-0 text-primary" aria-hidden />
+        <Input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Add a task…"
+          className="h-11 border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0"
+          enterKeyHint="done"
+          autoComplete="off"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          className="h-11 px-4"
+          disabled={!draft.trim()}
+        >
+          Add
+        </Button>
+      </form>
 
       {optimistic.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No tasks yet. Add one below.
+        <p className="py-2 text-sm text-muted-foreground">
+          No tasks yet. Type one above and tap Add.
         </p>
       ) : (
         <ul className="flex flex-col gap-1">
@@ -147,33 +181,6 @@ export function TrackTodoList({
           ))}
         </ul>
       )}
-
-      <form
-        className="sticky bottom-0 -mx-4 mt-2 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submitDraft();
-        }}
-      >
-        <Input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add task…"
-          className="h-12 text-base"
-          enterKeyHint="done"
-          autoComplete="off"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          className="h-12 w-12 shrink-0"
-          disabled={!draft.trim()}
-          aria-label="Add task"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
-      </form>
     </div>
   );
 }
