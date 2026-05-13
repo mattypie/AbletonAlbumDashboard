@@ -17,8 +17,10 @@ import { NotesEditor } from "@/components/notes-editor";
 import { AudioVersionList } from "@/components/audio-version-list";
 import { CopyPathButton } from "@/components/copy-path-button";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
+import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import {
   getCompletedActionsForTrack,
+  getOpenActionsForTrack,
   getTrack,
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
@@ -31,10 +33,11 @@ export default async function TrackDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [track, versions, completedTodos] = await Promise.all([
+  const [track, versions, completedTodos, openTodos] = await Promise.all([
     getTrack(id),
     getVersionsForTrack(id),
     getCompletedActionsForTrack(id),
+    getOpenActionsForTrack(id),
   ]);
   if (!track) notFound();
 
@@ -153,7 +156,14 @@ export default async function TrackDetailPage({
 
         <TabsContent value="overview">
           <div className="grid gap-4 lg:grid-cols-2">
-            <StagesChecklist trackId={track.id} stages={track.stages} />
+            <div className="flex flex-col gap-4">
+              <StagesChecklist trackId={track.id} stages={track.stages} />
+              <TrackTodoList
+                trackId={track.id}
+                initial={openTodos}
+                variant="desktop"
+              />
+            </div>
             <div className="flex flex-col gap-4">
               <BottleneckEditor
                 trackId={track.id}

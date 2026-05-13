@@ -43,13 +43,62 @@ function reducer(state: TodoItem[], action: Action): TodoItem[] {
   }
 }
 
+type Variant = "desktop" | "mobile";
+
+type Sizing = {
+  input: string;
+  addBtn: string;
+  addIcon: string;
+  row: string;
+  checkCell: string;
+  checkbox: string;
+  label: string;
+  editInput: string;
+  deleteBtn: string;
+  deleteIcon: string;
+};
+
+const SIZING: Record<Variant, Sizing> = {
+  mobile: {
+    input:
+      "h-11 border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0",
+    addBtn: "h-11 px-4",
+    addIcon: "ml-1 h-5 w-5 shrink-0 text-primary",
+    row: "flex min-h-[56px] items-center gap-3 border-b border-border/60 py-2",
+    checkCell: "flex h-11 w-11 shrink-0 items-center justify-center",
+    checkbox: "h-6 w-6",
+    label: "min-w-0 flex-1 truncate rounded-md px-1 py-2 text-left text-base",
+    editInput:
+      "min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary",
+    deleteBtn: "h-11 w-11 shrink-0",
+    deleteIcon: "h-5 w-5",
+  },
+  desktop: {
+    input:
+      "h-9 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0",
+    addBtn: "h-9 px-3",
+    addIcon: "ml-1 h-4 w-4 shrink-0 text-primary",
+    row: "flex min-h-[40px] items-center gap-2 border-b border-border/60 py-1.5",
+    checkCell: "flex h-8 w-8 shrink-0 items-center justify-center",
+    checkbox: "h-4 w-4",
+    label: "min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left text-sm",
+    editInput:
+      "min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary",
+    deleteBtn: "h-8 w-8 shrink-0",
+    deleteIcon: "h-4 w-4",
+  },
+};
+
 export function TrackTodoList({
   trackId,
   initial,
+  variant = "mobile",
 }: {
   trackId: string;
   initial: ActionRow[];
+  variant?: Variant;
 }) {
+  const sizing = SIZING[variant];
   const [optimistic, applyOptimistic] = useOptimistic<TodoItem[], Action>(
     initial,
     reducer,
@@ -144,20 +193,20 @@ export function TrackTodoList({
           submitDraft();
         }}
       >
-        <Plus className="ml-1 h-5 w-5 shrink-0 text-primary" aria-hidden />
+        <Plus className={sizing.addIcon} aria-hidden />
         <Input
           ref={inputRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Add a task…"
-          className="h-11 border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0"
+          className={sizing.input}
           enterKeyHint="done"
           autoComplete="off"
         />
         <Button
           type="submit"
           size="sm"
-          className="h-11 px-4"
+          className={sizing.addBtn}
           disabled={!draft.trim()}
         >
           Add
@@ -174,6 +223,7 @@ export function TrackTodoList({
             <TodoRow
               key={item.id}
               item={item}
+              sizing={sizing}
               onToggle={(next) => onToggle(item, next)}
               onEdit={(desc) => onEdit(item, desc)}
               onDelete={() => onDelete(item)}
@@ -187,11 +237,13 @@ export function TrackTodoList({
 
 function TodoRow({
   item,
+  sizing,
   onToggle,
   onEdit,
   onDelete,
 }: {
   item: TodoItem;
+  sizing: Sizing;
   onToggle: (done: boolean) => void;
   onEdit: (description: string) => void;
   onDelete: () => void;
@@ -211,12 +263,12 @@ function TodoRow({
   };
 
   return (
-    <li className="flex min-h-[56px] items-center gap-3 border-b border-border/60 py-2">
-      <label className="flex h-11 w-11 shrink-0 items-center justify-center">
+    <li className={sizing.row}>
+      <label className={sizing.checkCell}>
         <Checkbox
           checked={done}
           onCheckedChange={(v) => onToggle(v === true)}
-          className="h-6 w-6"
+          className={sizing.checkbox}
           aria-label={done ? "Mark not done" : "Mark done"}
         />
       </label>
@@ -235,16 +287,14 @@ function TodoRow({
               cancel();
             }
           }}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary"
+          className={sizing.editInput}
           enterKeyHint="done"
         />
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className={`min-w-0 flex-1 truncate rounded-md px-1 py-2 text-left text-base ${
-            done ? "text-muted-foreground line-through" : ""
-          }`}
+          className={`${sizing.label} ${done ? "text-muted-foreground line-through" : ""}`}
         >
           {item.description}
           {item._temp && (
@@ -260,11 +310,11 @@ function TodoRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-11 w-11 shrink-0"
+        className={sizing.deleteBtn}
         onClick={onDelete}
         aria-label="Delete task"
       >
-        <Trash2 className="h-5 w-5" />
+        <Trash2 className={sizing.deleteIcon} />
       </Button>
     </li>
   );
