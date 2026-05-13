@@ -14,7 +14,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   const supabase = getServerSupabase();
   const ids = tracks.map((t) => t.id);
 
-  const [stagesRes, bottleneckRes, actionRes] = await Promise.all([
+  const [stagesRes, bottleneckRes, actionRes, openActionsRes] = await Promise.all([
     supabase.from("track_stages").select("*").in("track_id", ids),
     supabase
       .from("bottlenecks")
@@ -26,6 +26,11 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
       .select("*")
       .in("track_id", ids)
       .eq("is_primary", true)
+      .is("completed_at", null),
+    supabase
+      .from("actions")
+      .select("track_id")
+      .in("track_id", ids)
       .is("completed_at", null),
   ]);
 
@@ -39,12 +44,17 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   (bottleneckRes.data ?? []).forEach((b) => bottleneckByTrack.set(b.track_id, b));
   const actionByTrack = new Map<string, ActionRow>();
   (actionRes.data ?? []).forEach((a) => actionByTrack.set(a.track_id, a));
+  const openCountByTrack = new Map<string, number>();
+  (openActionsRes.data ?? []).forEach((a) => {
+    openCountByTrack.set(a.track_id, (openCountByTrack.get(a.track_id) ?? 0) + 1);
+  });
 
   return tracks.map((t) => ({
     ...t,
     stages: stagesByTrack.get(t.id) ?? [],
     bottleneck: bottleneckByTrack.get(t.id) ?? null,
     primaryAction: actionByTrack.get(t.id) ?? null,
+    openTaskCount: openCountByTrack.get(t.id) ?? 0,
   }));
 }
 

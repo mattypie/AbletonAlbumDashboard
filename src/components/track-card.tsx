@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { ListChecks, MoreVertical } from "lucide-react";
+import {
+  CheckCircle2,
+  MessageSquare,
+  MoreHorizontal,
+  MoreVertical,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
+import { AddNoteDialog } from "@/components/add-note-dialog";
 import {
   BOTTLENECK_LABELS,
   progressFromStages,
@@ -41,13 +47,13 @@ export function TrackCard({
   return (
     <Card className={cn(recommended && "ring-1 ring-primary/40")}>
       {/* Mobile layout (<md) */}
-      <div className="flex flex-col gap-3 p-4 md:hidden">
+      <div className="md:hidden">
         <Link
           href={`/m/${track.id}`}
-          className="flex items-center gap-3"
+          className="flex items-start gap-4 p-4"
           aria-label={`Open ${track.name}`}
         >
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
             {track.cover_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -56,59 +62,88 @@ export function TrackCard({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-base font-bold text-foreground/30">
+              <div className="flex h-full items-center justify-center text-2xl font-bold text-foreground/30">
                 {track.name.slice(0, 2).toUpperCase()}
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-base font-semibold leading-tight">
-              {track.name}
+
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="min-w-0 flex-1 text-xl font-semibold leading-tight line-clamp-2">
+                {track.name}
+              </h3>
+              <ProgressRing
+                value={progress}
+                size={56}
+                stroke={5}
+                className="shrink-0"
+              />
             </div>
-            <div className="mt-1 flex items-center gap-2">
+
+            <div className="flex items-center gap-2">
               {genre && <Badge variant="primary">{genre}</Badge>}
               <span className="text-xs font-medium tabular-nums text-muted-foreground">
                 {progress}%
               </span>
             </div>
+
+            {(track.bottleneck || track.primaryAction) && (
+              <div className="flex flex-col gap-1 text-sm">
+                {track.bottleneck && (
+                  <p className="line-clamp-2 text-foreground">
+                    <span className="font-semibold text-danger">Blocker:</span>{" "}
+                    {track.bottleneck.description}
+                  </p>
+                )}
+                {track.primaryAction && (
+                  <p className="line-clamp-2 text-muted-foreground">
+                    <span className="font-semibold text-foreground">
+                      Next:
+                    </span>{" "}
+                    {track.primaryAction.description}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          <ProgressRing value={progress} size={44} />
         </Link>
 
-        {(track.bottleneck || track.primaryAction) && (
-          <div className="flex flex-col gap-1 text-xs">
-            {track.bottleneck && (
-              <p className="line-clamp-1 text-danger">
-                <span className="font-semibold">Blocker:</span>{" "}
-                {track.bottleneck.description}
-              </p>
-            )}
-            {track.primaryAction && (
-              <p className="line-clamp-1 text-muted-foreground">
-                <span className="font-semibold text-foreground">Next:</span>{" "}
-                {track.primaryAction.description}
-              </p>
-            )}
-          </div>
-        )}
+        <div className="flex items-stretch border-t border-border">
+          <Link
+            href={`/m/${track.id}`}
+            className="flex flex-1 items-center justify-center gap-2 px-3 py-3 text-sm font-medium text-primary"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            <span>
+              View tasks
+              {track.openTaskCount > 0 ? ` (${track.openTaskCount})` : ""}
+            </span>
+          </Link>
 
-        <div className="flex items-center gap-2">
-          <Button asChild className="h-11 flex-1">
-            <Link href={`/m/${track.id}`}>
-              <ListChecks className="h-4 w-4" />
-              Open tasks
-            </Link>
-          </Button>
+          <AddNoteDialog
+            trackId={track.id}
+            trackName={track.name}
+            currentNotes={track.notes}
+          >
+            <button
+              type="button"
+              className="flex flex-1 items-center justify-center gap-2 border-l border-border px-3 py-3 text-sm font-medium text-foreground"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span>Add note</span>
+            </button>
+          </AddNoteDialog>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-11 w-11 shrink-0"
+              <button
+                type="button"
+                className="flex w-14 shrink-0 items-center justify-center border-l border-border text-muted-foreground"
                 aria-label="Track actions"
               >
-                <MoreVertical className="h-5 w-5" />
-              </Button>
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
