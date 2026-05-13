@@ -80,6 +80,7 @@ export type TrackWithDetails = TrackRow & {
   stages: StageRow[];
   bottleneck: BottleneckRow | null;
   primaryAction: ActionRow | null;
+  openTaskCount: number;
 };
 
 export function progressFromStages(stages: StageRow[]): number {

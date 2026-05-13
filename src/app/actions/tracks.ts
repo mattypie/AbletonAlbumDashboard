@@ -173,5 +173,7 @@ export async function updateNotes(id: string, notes: string) {
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
   if (error) throw error;
+  revalidatePath("/");
   revalidatePath(`/tracks/${id}`);
+  revalidatePath(`/m/${id}`);
 }
