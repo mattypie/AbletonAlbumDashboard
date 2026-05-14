@@ -2,6 +2,26 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import type { AlbumRow, AlbumWithTrackCount } from "@/lib/types";
 
+// PostgREST returns PGRST205 when a referenced table is not in its schema
+// cache — almost always because migration 0010 (which creates `albums` and
+// `tracks.album_id`) has not been applied yet. Treat that as "no albums" so
+// the dashboard keeps rendering instead of throwing a Server Components
+// error; the user will see album features come online once they apply the
+// migration.
+function isMissingRelation(error: { code?: string | null } | null): boolean {
+  return error?.code === "PGRST205";
+}
+
+let warnedAboutMissingAlbums = false;
+function warnMissingAlbumsOnce() {
+  if (warnedAboutMissingAlbums) return;
+  warnedAboutMissingAlbums = true;
+  console.warn(
+    "[albums] `albums` table is missing from PostgREST schema cache. " +
+      "Apply supabase/migrations/0010_albums.sql to enable album features.",
+  );
+}
+
 export async function getActiveAlbum(): Promise<AlbumRow | null> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase
@@ -10,7 +30,13 @@ export async function getActiveAlbum(): Promise<AlbumRow | null> {
     .eq("owner_id", OWNER_ID)
     .eq("is_active", true)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelation(error)) {
+      warnMissingAlbumsOnce();
+      return null;
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -22,7 +48,13 @@ export async function getAlbum(id: string): Promise<AlbumRow | null> {
     .eq("owner_id", OWNER_ID)
     .eq("id", id)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelation(error)) {
+      warnMissingAlbumsOnce();
+      return null;
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -38,7 +70,13 @@ async function attachTrackCounts(
     .eq("owner_id", OWNER_ID)
     .in("album_id", ids)
     .neq("status", "archived");
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelation(error)) {
+      warnMissingAlbumsOnce();
+      return albums.map((a) => ({ ...a, trackCount: 0 }));
+    }
+    throw error;
+  }
   const counts = new Map<string, number>();
   (data ?? []).forEach((row) => {
     if (!row.album_id) return;
@@ -56,7 +94,13 @@ export async function listAlbums(): Promise<AlbumWithTrackCount[]> {
     .order("is_active", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelation(error)) {
+      warnMissingAlbumsOnce();
+      return [];
+    }
+    throw error;
+  }
   return attachTrackCounts(data ?? []);
 }
 
@@ -73,6 +117,12 @@ export async function listUpcomingAlbums(
     .order("start_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
     .limit(limit);
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelation(error)) {
+      warnMissingAlbumsOnce();
+      return [];
+    }
+    throw error;
+  }
   return attachTrackCounts(data ?? []);
 }
