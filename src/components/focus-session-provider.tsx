@@ -1,0 +1,179 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import type { ChecklistItem } from "@/components/calendar/session-todo-checklist";
+
+const STORAGE_KEY = "finish-five.focus-session";
+
+export type FocusPhase = "idle" | "running" | "paused" | "stopped";
+
+type FocusSessionState = {
+  phase: FocusPhase;
+  trackId: string | null;
+  trackName: string | null;
+  plannedSessionId: string | null;
+  startedAtMs: number | null;
+  accumulatedMs: number;
+  todos: ChecklistItem[];
+  notes: string;
+};
+
+const INITIAL_STATE: FocusSessionState = {
+  phase: "idle",
+  trackId: null,
+  trackName: null,
+  plannedSessionId: null,
+  startedAtMs: null,
+  accumulatedMs: 0,
+  todos: [],
+  notes: "",
+};
+
+export type StartInput = {
+  trackId: string;
+  trackName: string;
+  plannedSessionId?: string | null;
+  initialTodos?: ChecklistItem[];
+};
+
+type FocusSessionContextValue = FocusSessionState & {
+  elapsedMs: number;
+  start: (input: StartInput) => void;
+  pause: () => void;
+  resume: () => void;
+  stop: () => void;
+  reset: () => void;
+  setTodos: (next: ChecklistItem[]) => void;
+  setNotes: (next: string) => void;
+};
+
+const FocusSessionContext = createContext<FocusSessionContextValue | null>(null);
+
+export function useFocusSession() {
+  const ctx = useContext(FocusSessionContext);
+  if (!ctx) {
+    throw new Error("useFocusSession must be used inside FocusSessionProvider");
+  }
+  return ctx;
+}
+
+export function FocusSessionProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<FocusSessionState>(INITIAL_STATE);
+  const [, forceTick] = useState(0);
+  const hydrated = useRef(false);
+
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as FocusSessionState;
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setState(parsed);
+      /* eslint-enable react-hooks/set-state-in-effect */
+    } catch {
+      // ignore corrupt storage
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    try {
+      if (state.phase === "idle") {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+    } catch {
+      // ignore storage errors (quota, private mode, etc.)
+    }
+  }, [state]);
+
+  useEffect(() => {
+    if (state.phase !== "running") return;
+    const id = setInterval(() => forceTick((n) => n + 1), 250);
+    return () => clearInterval(id);
+  }, [state.phase]);
+
+  const elapsedMs =
+    state.phase === "running" && state.startedAtMs != null
+      ? // eslint-disable-next-line react-hooks/purity -- ticker re-renders 4x/sec so render-time Date.now() is the timer source
+        state.accumulatedMs + (Date.now() - state.startedAtMs)
+      : state.accumulatedMs;
+
+  const start = useCallback((input: StartInput) => {
+    setState({
+      phase: "running",
+      trackId: input.trackId,
+      trackName: input.trackName,
+      plannedSessionId: input.plannedSessionId ?? null,
+      startedAtMs: Date.now(),
+      accumulatedMs: 0,
+      todos: input.initialTodos ?? [],
+      notes: "",
+    });
+  }, []);
+
+  const pause = useCallback(() => {
+    setState((prev) => {
+      if (prev.phase !== "running" || prev.startedAtMs == null) return prev;
+      const acc = prev.accumulatedMs + (Date.now() - prev.startedAtMs);
+      return { ...prev, phase: "paused", accumulatedMs: acc, startedAtMs: null };
+    });
+  }, []);
+
+  const resume = useCallback(() => {
+    setState((prev) => {
+      if (prev.phase !== "paused") return prev;
+      return { ...prev, phase: "running", startedAtMs: Date.now() };
+    });
+  }, []);
+
+  const stop = useCallback(() => {
+    setState((prev) => {
+      let acc = prev.accumulatedMs;
+      if (prev.phase === "running" && prev.startedAtMs != null) {
+        acc = prev.accumulatedMs + (Date.now() - prev.startedAtMs);
+      }
+      return { ...prev, phase: "stopped", accumulatedMs: acc, startedAtMs: null };
+    });
+  }, []);
+
+  const reset = useCallback(() => {
+    setState(INITIAL_STATE);
+  }, []);
+
+  const setTodos = useCallback((next: ChecklistItem[]) => {
+    setState((prev) => ({ ...prev, todos: next }));
+  }, []);
+
+  const setNotes = useCallback((next: string) => {
+    setState((prev) => ({ ...prev, notes: next }));
+  }, []);
+
+  const value: FocusSessionContextValue = {
+    ...state,
+    elapsedMs,
+    start,
+    pause,
+    resume,
+    stop,
+    reset,
+    setTodos,
+    setNotes,
+  };
+
+  return (
+    <FocusSessionContext.Provider value={value}>
+      {children}
+    </FocusSessionContext.Provider>
+  );
+}
