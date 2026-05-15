@@ -41,6 +41,7 @@ export function SessionCompleteDialog({
   draft,
   sessionTypes,
   tracks,
+  initialTodos,
   redirectTo,
 }: {
   open: boolean;
@@ -49,6 +50,7 @@ export function SessionCompleteDialog({
   draft: CompleteDraft | null;
   sessionTypes: SessionTypeRow[];
   tracks: TrackRow[];
+  initialTodos?: Array<{ id: string; description: string; done: boolean }>;
   redirectTo?: string;
 }) {
   const router = useRouter();
@@ -79,18 +81,24 @@ export function SessionCompleteDialog({
     setTrackId(session?.track?.id ?? null);
     setSessionTypeId(session?.session_type?.id ?? null);
     setTodoState(
-      (session?.todos ?? []).map((t) => ({
-        id: t.id,
-        description: t.description,
-        done: t.done,
-      })),
+      initialTodos
+        ? initialTodos.map((t) => ({
+            id: t.id,
+            description: t.description,
+            done: t.done,
+          }))
+        : (session?.todos ?? []).map((t) => ({
+            id: t.id,
+            description: t.description,
+            done: t.done,
+          })),
     );
     setCarryUnchecked(true);
     setManualMinutes("");
     setBottleneckDesc("");
     setBottleneckCat("arrangement");
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [open, session]);
+  }, [open, session, initialTodos]);
 
   const computedDurationSec = (() => {
     if (manualMinutes && /^\d+$/.test(manualMinutes)) {
@@ -130,22 +138,6 @@ export function SessionCompleteDialog({
 
     startTx(async () => {
       try {
-        // Persist todo done states first.
-        if (session) {
-          const updates = todoState
-            .filter((t) => !t.id.startsWith("tmp-"))
-            .map((t) => {
-              const original = session.todos.find((o) => o.id === t.id);
-              if (!original) return null;
-              if (original.done !== t.done) {
-                return fetch("/api/__noop__"); // placeholder
-              }
-              return null;
-            })
-            .filter(Boolean);
-          void updates;
-        }
-
         await completeSession({
           sessionId: session?.id ?? null,
           trackId,
@@ -160,6 +152,12 @@ export function SessionCompleteDialog({
           newBottleneckDescription: bottleneckDesc,
           newBottleneckCategory: bottleneckDesc ? bottleneckCat : undefined,
           carryOverTodoIds: carryIds,
+          todos: todoState
+            .map((t) => ({
+              description: t.description.trim(),
+              done: t.done,
+            }))
+            .filter((t) => t.description.length > 0),
         });
         onOpenChange(false);
         router.refresh();

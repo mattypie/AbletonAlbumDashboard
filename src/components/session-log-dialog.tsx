@@ -35,6 +35,7 @@ export function SessionLogDialog({
   trackId,
   primaryAction,
   draft,
+  todos,
   redirectTo = "/",
 }: {
   open: boolean;
@@ -42,6 +43,7 @@ export function SessionLogDialog({
   trackId: string;
   primaryAction: ActionRow | null;
   draft: SessionDraft | null;
+  todos?: Array<{ description: string; done: boolean }>;
   redirectTo?: string;
 }) {
   const router = useRouter();
@@ -102,6 +104,12 @@ export function SessionLogDialog({
             ? newBottleneckCategory
             : undefined,
           completeAction: completeActionFlag && !!primaryAction,
+          todos: todos
+            ?.map((t) => ({
+              description: t.description.trim(),
+              done: t.done,
+            }))
+            .filter((t) => t.description.length > 0),
         });
         reset();
         onOpenChange(false);

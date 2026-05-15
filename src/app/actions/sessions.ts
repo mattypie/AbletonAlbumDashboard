@@ -177,6 +177,14 @@ const completeSchema = z.object({
     .optional(),
   completeAction: z.boolean().optional().default(false),
   carryOverTodoIds: z.array(z.string().uuid()).optional(),
+  todos: z
+    .array(
+      z.object({
+        description: z.string().min(1).max(500),
+        done: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 
 export async function completeSession(input: {
@@ -195,6 +203,7 @@ export async function completeSession(input: {
   newBottleneckCategory?: string;
   completeAction?: boolean;
   carryOverTodoIds?: string[];
+  todos?: Array<{ description: string; done: boolean }>;
 }) {
   const parsed = completeSchema.parse(input);
   const supabase = getServerSupabase();
@@ -230,6 +239,73 @@ export async function completeSession(input: {
       .single();
     if (error) throw error;
     resolvedSessionId = data.id;
+  }
+
+  // Sync session_todos to the supplied list. Matches by description so any
+  // existing row keeps its id (so carry-over below still works), updates
+  // done/sort_order, inserts new descriptions, deletes unmatched rows.
+  if (parsed.todos && resolvedSessionId) {
+    const sessionId = resolvedSessionId;
+    const { data: existing, error: exErr } = await supabase
+      .from("session_todos")
+      .select("id, description, done")
+      .eq("session_id", sessionId);
+    if (exErr) throw exErr;
+
+    const pool = [...(existing ?? [])];
+    const matchedIds = new Set<string>();
+    const inserts: Array<{
+      session_id: string;
+      description: string;
+      done: boolean;
+      done_at: string | null;
+      sort_order: number;
+    }> = [];
+    const updates: Array<{
+      id: string;
+      done: boolean;
+      done_at: string | null;
+      sort_order: number;
+    }> = [];
+
+    parsed.todos.forEach((t, i) => {
+      const matchIdx = pool.findIndex(
+        (e) => !matchedIds.has(e.id) && e.description === t.description,
+      );
+      const doneAt = t.done ? new Date().toISOString() : null;
+      if (matchIdx >= 0) {
+        const match = pool[matchIdx];
+        matchedIds.add(match.id);
+        updates.push({ id: match.id, done: t.done, done_at: doneAt, sort_order: i });
+      } else {
+        inserts.push({
+          session_id: sessionId,
+          description: t.description,
+          done: t.done,
+          done_at: doneAt,
+          sort_order: i,
+        });
+      }
+    });
+
+    const toDelete = (existing ?? [])
+      .filter((e) => !matchedIds.has(e.id))
+      .map((e) => e.id);
+
+    await Promise.all([
+      ...updates.map((u) =>
+        supabase
+          .from("session_todos")
+          .update({ done: u.done, done_at: u.done_at, sort_order: u.sort_order })
+          .eq("id", u.id),
+      ),
+      inserts.length > 0
+        ? supabase.from("session_todos").insert(inserts)
+        : Promise.resolve(),
+      toDelete.length > 0
+        ? supabase.from("session_todos").delete().in("id", toDelete)
+        : Promise.resolve(),
+    ]);
   }
 
   // Carry over: clone unchecked todo descriptions onto a new planned session
@@ -322,6 +398,7 @@ export async function logSession(input: {
   energyRating?: number | null;
   enjoymentRating?: number | null;
   carryOverTodoIds?: string[];
+  todos?: Array<{ description: string; done: boolean }>;
 }) {
   return completeSession({
     sessionId: input.sessionId ?? null,
@@ -339,5 +416,6 @@ export async function logSession(input: {
     newBottleneckCategory: input.newBottleneckCategory,
     completeAction: input.completeAction ?? false,
     carryOverTodoIds: input.carryOverTodoIds,
+    todos: input.todos,
   });
 }

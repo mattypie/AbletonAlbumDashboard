@@ -9,6 +9,10 @@ import {
   type SessionDraft,
 } from "@/components/session-log-dialog";
 import { SessionCompleteDialog } from "@/components/calendar/session-complete-dialog";
+import {
+  SessionTodoChecklist,
+  type ChecklistItem,
+} from "@/components/calendar/session-todo-checklist";
 import type {
   ActionRow,
   CalendarSessionRow,
@@ -35,6 +39,13 @@ export function FocusRunner({
   const [elapsedMs, setElapsedMs] = useState(0);
   const [draft, setDraft] = useState<SessionDraft | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [todos, setTodos] = useState<ChecklistItem[]>(() =>
+    (plannedSession?.todos ?? []).map((t) => ({
+      id: t.id,
+      description: t.description,
+      done: t.done,
+    })),
+  );
   const startedAtRef = useRef<number | null>(null);
   const accumRef = useRef(0);
 
@@ -112,19 +123,13 @@ export function FocusRunner({
             ? primaryAction.description
             : "No primary action — set one to anchor the session."}
         </p>
-        {plannedSession && plannedSession.todos.length > 0 && (
-          <ul className="mx-auto mt-2 flex max-w-md flex-col gap-1 text-left text-sm">
-            {plannedSession.todos.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1"
-              >
-                <span className="h-3 w-3 rounded-sm border border-border" />
-                {t.description}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="mx-auto mt-2 w-full max-w-md text-left">
+          <SessionTodoChecklist
+            items={todos}
+            onChange={setTodos}
+            placeholder="Add a todo for this session…"
+          />
+        </div>
       </div>
 
       <div className="font-mono text-7xl tabular-nums">
@@ -183,6 +188,7 @@ export function FocusRunner({
           draft={draft}
           sessionTypes={sessionTypes!}
           tracks={tracks!}
+          initialTodos={todos}
           redirectTo="/calendar"
         />
       ) : (
@@ -192,6 +198,7 @@ export function FocusRunner({
           trackId={track.id}
           primaryAction={primaryAction}
           draft={draft}
+          todos={todos}
           redirectTo="/"
         />
       )}
