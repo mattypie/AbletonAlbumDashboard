@@ -1,26 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Pause, Play, Square, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   SessionLogDialog,
   type SessionDraft,
 } from "@/components/session-log-dialog";
 import { SessionCompleteDialog } from "@/components/calendar/session-complete-dialog";
-import {
-  SessionTodoChecklist,
-  type ChecklistItem,
-} from "@/components/calendar/session-todo-checklist";
+import { SessionTodoChecklist } from "@/components/calendar/session-todo-checklist";
+import { useFocusSession } from "@/components/focus-session-provider";
 import type {
   ActionRow,
   CalendarSessionRow,
   SessionTypeRow,
   TrackRow,
 } from "@/lib/types";
-
-type Phase = "idle" | "running" | "paused" | "stopped";
 
 export function FocusRunner({
   track,
@@ -35,70 +34,71 @@ export function FocusRunner({
   sessionTypes?: SessionTypeRow[];
   tracks?: TrackRow[];
 }) {
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [draft, setDraft] = useState<SessionDraft | null>(null);
+  const router = useRouter();
+  const ctx = useFocusSession();
   const [logOpen, setLogOpen] = useState(false);
-  const [todos, setTodos] = useState<ChecklistItem[]>(() =>
-    (plannedSession?.todos ?? []).map((t) => ({
-      id: t.id,
-      description: t.description,
-      done: t.done,
-    })),
-  );
-  const startedAtRef = useRef<number | null>(null);
-  const accumRef = useRef(0);
 
+  const isOtherTrackActive =
+    (ctx.phase === "running" || ctx.phase === "paused") &&
+    ctx.trackId != null &&
+    ctx.trackId !== track.id;
+
+  const isSameTrack = ctx.trackId === track.id;
+
+  // Open the log dialog automatically the moment a session stops for this track.
   useEffect(() => {
-    if (phase !== "running") return;
-    const tick = () => {
-      const startedAt = startedAtRef.current ?? Date.now();
-      setElapsedMs(accumRef.current + (Date.now() - startedAt));
-    };
-    const id = setInterval(tick, 250);
-    return () => clearInterval(id);
-  }, [phase]);
+    if (isSameTrack && ctx.phase === "stopped") {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setLogOpen(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+  }, [isSameTrack, ctx.phase]);
+
+  if (isOtherTrackActive) {
+    return (
+      <ActiveElsewhereNotice
+        activeTrackName={ctx.trackName}
+        onReturn={() => router.push(`/focus/${ctx.trackId}`)}
+        onStopAndLog={() => {
+          const target = `/focus/${ctx.trackId}`;
+          ctx.stop();
+          router.push(target);
+        }}
+      />
+    );
+  }
+
+  const phase = isSameTrack ? ctx.phase : "idle";
+  const elapsedMs = isSameTrack ? ctx.elapsedMs : 0;
+  const todos = isSameTrack ? ctx.todos : [];
+  const notes = isSameTrack ? ctx.notes : "";
 
   const start = () => {
-    startedAtRef.current = Date.now();
-    setPhase("running");
-  };
-
-  const pause = () => {
-    if (phase !== "running") return;
-    accumRef.current += Date.now() - (startedAtRef.current ?? Date.now());
-    startedAtRef.current = null;
-    setPhase("paused");
-  };
-
-  const resume = () => {
-    startedAtRef.current = Date.now();
-    setPhase("running");
-  };
-
-  const stop = () => {
-    if (phase === "running") {
-      accumRef.current += Date.now() - (startedAtRef.current ?? Date.now());
-    }
-    const totalMs = accumRef.current;
-    const ended = new Date();
-    const started = new Date(ended.getTime() - totalMs);
-    setDraft({
-      startedAt: started.toISOString(),
-      endedAt: ended.toISOString(),
-      durationSeconds: Math.round(totalMs / 1000),
+    ctx.start({
+      trackId: track.id,
+      trackName: track.name,
+      plannedSessionId: plannedSession?.id ?? null,
+      initialTodos: (plannedSession?.todos ?? []).map((t) => ({
+        id: t.id,
+        description: t.description,
+        done: t.done,
+      })),
     });
-    setLogOpen(true);
-    setPhase("stopped");
   };
 
-  const reset = () => {
-    accumRef.current = 0;
-    startedAtRef.current = null;
-    setElapsedMs(0);
-    setPhase("idle");
-    setDraft(null);
-  };
+  const draft: SessionDraft | null =
+    phase === "stopped"
+      ? (() => {
+          const totalMs = ctx.accumulatedMs;
+          const ended = new Date();
+          const started = new Date(ended.getTime() - totalMs);
+          return {
+            startedAt: started.toISOString(),
+            endedAt: ended.toISOString(),
+            durationSeconds: Math.round(totalMs / 1000),
+          };
+        })()
+      : null;
 
   const useEnhancedDialog = !!plannedSession && !!sessionTypes && !!tracks;
 
@@ -126,8 +126,21 @@ export function FocusRunner({
         <div className="mx-auto mt-2 w-full max-w-md text-left">
           <SessionTodoChecklist
             items={todos}
-            onChange={setTodos}
+            onChange={ctx.setTodos}
             placeholder="Add a todo for this session…"
+          />
+        </div>
+        <div className="mx-auto mt-1 w-full max-w-md text-left">
+          <Label htmlFor="focus-notes" className="text-xs text-muted-foreground">
+            Session notes
+          </Label>
+          <Textarea
+            id="focus-notes"
+            value={notes}
+            onChange={(e) => ctx.setNotes(e.target.value)}
+            rows={3}
+            placeholder="Jot ideas, blockers, or thoughts as they come up…"
+            className="mt-1"
           />
         </div>
       </div>
@@ -145,11 +158,11 @@ export function FocusRunner({
         )}
         {phase === "running" && (
           <>
-            <Button size="lg" variant="outline" onClick={pause}>
+            <Button size="lg" variant="outline" onClick={ctx.pause}>
               <Pause className="h-5 w-5" />
               Pause
             </Button>
-            <Button size="lg" variant="accent" onClick={stop}>
+            <Button size="lg" variant="accent" onClick={ctx.stop}>
               <Square className="h-5 w-5" />
               Stop &amp; log
             </Button>
@@ -157,11 +170,11 @@ export function FocusRunner({
         )}
         {phase === "paused" && (
           <>
-            <Button size="lg" onClick={resume}>
+            <Button size="lg" onClick={ctx.resume}>
               <Play className="h-5 w-5" />
               Resume
             </Button>
-            <Button size="lg" variant="accent" onClick={stop}>
+            <Button size="lg" variant="accent" onClick={ctx.stop}>
               <Square className="h-5 w-5" />
               Stop &amp; log
             </Button>
@@ -173,7 +186,14 @@ export function FocusRunner({
               <Check className="h-5 w-5" />
               Open log
             </Button>
-            <Button size="lg" variant="ghost" onClick={reset}>
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => {
+                setLogOpen(false);
+                ctx.reset();
+              }}
+            >
               Reset
             </Button>
           </>
@@ -189,6 +209,11 @@ export function FocusRunner({
           sessionTypes={sessionTypes!}
           tracks={tracks!}
           initialTodos={todos}
+          initialNotes={notes}
+          onCompleted={() => {
+            setLogOpen(false);
+            ctx.reset();
+          }}
           redirectTo="/calendar"
         />
       ) : (
@@ -199,6 +224,11 @@ export function FocusRunner({
           primaryAction={primaryAction}
           draft={draft}
           todos={todos}
+          notes={notes}
+          onCompleted={() => {
+            setLogOpen(false);
+            ctx.reset();
+          }}
           redirectTo="/"
         />
       )}
@@ -206,8 +236,46 @@ export function FocusRunner({
   );
 }
 
+function ActiveElsewhereNotice({
+  activeTrackName,
+  onReturn,
+  onStopAndLog,
+}: {
+  activeTrackName: string | null;
+  onReturn: () => void;
+  onStopAndLog: () => void;
+}) {
+  return (
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center gap-6 text-center">
+      <div className="flex flex-col gap-2">
+        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Focus
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          A session is already running
+        </h1>
+        <p className="text-muted-foreground">
+          You have an active focus session on{" "}
+          <span className="font-medium text-foreground">
+            {activeTrackName ?? "another track"}
+          </span>
+          . Return to it or stop and log it before starting a new one.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Button size="lg" onClick={onReturn}>
+          Return to session
+        </Button>
+        <Button size="lg" variant="outline" onClick={onStopAndLog}>
+          Stop &amp; log
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function formatHMS(totalMs: number) {
-  const totalSeconds = Math.floor(totalMs / 1000);
+  const totalSeconds = Math.max(0, Math.floor(totalMs / 1000));
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;

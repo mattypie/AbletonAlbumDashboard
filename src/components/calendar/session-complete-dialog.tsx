@@ -42,6 +42,8 @@ export function SessionCompleteDialog({
   sessionTypes,
   tracks,
   initialTodos,
+  initialNotes,
+  onCompleted,
   redirectTo,
 }: {
   open: boolean;
@@ -51,6 +53,8 @@ export function SessionCompleteDialog({
   sessionTypes: SessionTypeRow[];
   tracks: TrackRow[];
   initialTodos?: Array<{ id: string; description: string; done: boolean }>;
+  initialNotes?: string;
+  onCompleted?: () => void;
   redirectTo?: string;
 }) {
   const router = useRouter();
@@ -75,7 +79,7 @@ export function SessionCompleteDialog({
     /* eslint-disable react-hooks/set-state-in-effect */
     setImproved(session?.improved ?? "");
     setStillBroken(session?.still_broken ?? "");
-    setNotesMd(session?.notes_md ?? "");
+    setNotesMd(initialNotes ?? session?.notes_md ?? "");
     setEnergy(session?.energy_rating ?? null);
     setEnjoyment(session?.enjoyment_rating ?? null);
     setTrackId(session?.track?.id ?? null);
@@ -98,7 +102,7 @@ export function SessionCompleteDialog({
     setBottleneckDesc("");
     setBottleneckCat("arrangement");
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [open, session, initialTodos]);
+  }, [open, session, initialTodos, initialNotes]);
 
   const computedDurationSec = (() => {
     if (manualMinutes && /^\d+$/.test(manualMinutes)) {
@@ -159,6 +163,7 @@ export function SessionCompleteDialog({
             }))
             .filter((t) => t.description.length > 0),
         });
+        onCompleted?.();
         onOpenChange(false);
         router.refresh();
         if (redirectTo) router.push(redirectTo);

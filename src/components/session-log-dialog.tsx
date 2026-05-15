@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -36,6 +36,8 @@ export function SessionLogDialog({
   primaryAction,
   draft,
   todos,
+  notes,
+  onCompleted,
   redirectTo = "/",
 }: {
   open: boolean;
@@ -44,11 +46,14 @@ export function SessionLogDialog({
   primaryAction: ActionRow | null;
   draft: SessionDraft | null;
   todos?: Array<{ description: string; done: boolean }>;
+  notes?: string;
+  onCompleted?: () => void;
   redirectTo?: string;
 }) {
   const router = useRouter();
   const [improved, setImproved] = useState("");
   const [stillBroken, setStillBroken] = useState("");
+  const [notesMd, setNotesMd] = useState("");
   const [newBottleneckDescription, setNewBottleneckDescription] = useState("");
   const [newBottleneckCategory, setNewBottleneckCategory] =
     useState<string>("arrangement");
@@ -56,9 +61,17 @@ export function SessionLogDialog({
   const [manualMinutes, setManualMinutes] = useState<string>("");
   const [pending, start] = useTransition();
 
+  useEffect(() => {
+    if (!open) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setNotesMd(notes ?? "");
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [open, notes]);
+
   const reset = () => {
     setImproved("");
     setStillBroken("");
+    setNotesMd("");
     setNewBottleneckDescription("");
     setNewBottleneckCategory("arrangement");
     setCompleteActionFlag(false);
@@ -99,6 +112,7 @@ export function SessionLogDialog({
           endedAt,
           improved,
           stillBroken,
+          notesMd,
           newBottleneckDescription,
           newBottleneckCategory: newBottleneckDescription
             ? newBottleneckCategory
@@ -112,6 +126,7 @@ export function SessionLogDialog({
             .filter((t) => t.description.length > 0),
         });
         reset();
+        onCompleted?.();
         onOpenChange(false);
         router.push(redirectTo);
         router.refresh();
@@ -189,6 +204,17 @@ export function SessionLogDialog({
               onChange={(e) => setStillBroken(e.target.value)}
               rows={2}
               placeholder="Drop transition feels abrupt…"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Notes for next session</Label>
+            <Textarea
+              id="notes"
+              value={notesMd}
+              onChange={(e) => setNotesMd(e.target.value)}
+              rows={3}
+              placeholder="What you want to do next time…"
             />
           </div>
 
