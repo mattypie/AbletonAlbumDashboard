@@ -1,17 +1,32 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Play } from "lucide-react";
 import {
   getCompletedActionsForTrack,
   getOpenActionsForTrack,
   getTrack,
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
-import { VersionItem } from "@/components/audio/version-item";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
+import { StagesChecklist } from "@/components/stages-checklist";
+import { BottleneckEditor } from "@/components/bottleneck-editor";
+import { NextActionEditor } from "@/components/next-action-editor";
+import { NotesEditor } from "@/components/notes-editor";
+import { AudioVersionList } from "@/components/audio-version-list";
+import { CopyPathButton } from "@/components/copy-path-button";
 
 export const dynamic = "force-dynamic";
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
+  );
+}
 
 export default async function MobileTrackPage({
   params,
@@ -28,70 +43,114 @@ export default async function MobileTrackPage({
 
   if (!track) notFound();
 
-  const tag = track.tags?.[0];
+  const [genre, ...descriptors] = track.tags;
+  const meta = [
+    track.song_key ? track.song_key : null,
+    track.bpm ? `${track.bpm} BPM` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-5 pb-4">
-      <Link
-        href="/"
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-muted-foreground"
-        aria-label="Back to dashboard"
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/"
+          className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-muted-foreground"
+          aria-label="Back to dashboard"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <Button asChild variant="ghost" size="sm" className="-mr-2">
+          <Link
+            href={`/tracks/${track.id}/edit`}
+            aria-label="Edit track metadata"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Link>
+        </Button>
+      </div>
 
-      <header className="flex items-center gap-3">
+      <header className="flex items-start gap-3">
         {track.cover_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={track.cover_image_url}
             alt=""
-            className="h-14 w-14 shrink-0 rounded-md object-cover"
+            className="h-20 w-20 shrink-0 rounded-md object-cover"
           />
         ) : (
-          <div className="h-14 w-14 shrink-0 rounded-md bg-surface-2" />
+          <div className="h-20 w-20 shrink-0 rounded-md bg-surface-2" />
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-semibold">{track.name}</h1>
-          {tag && (
-            <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">
-              {tag}
+          <h1 className="truncate text-xl font-semibold leading-tight">
+            {track.name}
+          </h1>
+          {genre && (
+            <div className="mt-1.5">
+              <Badge variant="primary">{genre}</Badge>
+            </div>
+          )}
+          {meta.length > 0 && (
+            <p className="mt-1.5 text-xs font-medium tabular-nums text-foreground/80">
+              {meta.join(" · ")}
+            </p>
+          )}
+          {descriptors.length > 0 && (
+            <p className="mt-1 truncate text-xs text-muted-foreground">
+              {descriptors.join(", ")}
             </p>
           )}
         </div>
       </header>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Preview
-        </h2>
-        {versions.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {versions.map((v) => (
-              <li key={v.id}>
-                <VersionItem
-                  version={v}
-                  trackId={track.id}
-                  showDelete={false}
-                />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            No preview yet. Upload a bounce on desktop.
-          </p>
-        )}
-        {track.als_file_path && (
-          <p className="truncate text-xs text-muted-foreground">
-            Project: {track.als_file_path}
-          </p>
-        )}
-      </section>
+      <Button asChild size="lg" className="w-full">
+        <Link href={`/focus/${track.id}`}>
+          <Play className="h-4 w-4" />
+          Start focus session
+        </Link>
+      </Button>
 
-      <section>
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Tasks</SectionHeading>
         <TrackTodoList trackId={track.id} initial={todos} />
       </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Stages</SectionHeading>
+        <StagesChecklist trackId={track.id} stages={track.stages} />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Bottleneck</SectionHeading>
+        <BottleneckEditor trackId={track.id} bottleneck={track.bottleneck} />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Next action</SectionHeading>
+        <NextActionEditor trackId={track.id} action={track.primaryAction} />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Versions</SectionHeading>
+        <AudioVersionList trackId={track.id} versions={versions} />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Notes</SectionHeading>
+        <NotesEditor trackId={track.id} initial={track.notes} />
+      </section>
+
+      {track.als_file_path && (
+        <section className="flex flex-col gap-2">
+          <SectionHeading>Project file</SectionHeading>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-surface p-3">
+            <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+              {track.als_file_path}
+            </span>
+            <CopyPathButton path={track.als_file_path} size="sm" />
+          </div>
+        </section>
+      )}
 
       <section>
         <TrackTodoHistory trackId={track.id} initial={completedTodos} />

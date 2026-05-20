@@ -206,7 +206,7 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
           </div>
         </main>
 
-        <aside className="w-full xl:w-[360px] xl:shrink-0">
+        <aside className="hidden w-full lg:block xl:w-[360px] xl:shrink-0">
           <TemplateDetailPanel
             ref={notesRef}
             item={selected}

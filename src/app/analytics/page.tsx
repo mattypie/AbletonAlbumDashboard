@@ -147,8 +147,11 @@ export default async function AnalyticsPage() {
                 const max = a.categoryCounts[0][1];
                 const pct = (count / max) * 100;
                 return (
-                  <li key={cat} className="flex items-center gap-3 text-sm">
-                    <Badge variant="warning" className="w-32 justify-center">
+                  <li key={cat} className="flex items-center gap-2 text-sm sm:gap-3">
+                    <Badge
+                      variant="warning"
+                      className="w-24 shrink-0 justify-center text-[10px] sm:w-32 sm:text-xs"
+                    >
                       {BOTTLENECK_LABELS[
                         cat as keyof typeof BOTTLENECK_LABELS
                       ] ?? cat}

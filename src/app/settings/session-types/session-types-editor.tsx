@@ -65,13 +65,13 @@ export function SessionTypesEditor({ initial }: { initial: SessionTypeRow[] }) {
             </div>
             <div className="grid gap-1.5">
               <Label>Color</Label>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setNewColor(c)}
-                    className="h-7 w-7 rounded-full border-2"
+                    className="h-9 w-9 rounded-full border-2"
                     style={{
                       backgroundColor: c,
                       borderColor: newColor === c ? "#000" : "transparent",
@@ -152,7 +152,8 @@ function TypeRow({
           type="color"
           value={color}
           onChange={(e) => setColor(e.target.value)}
-          className="h-8 w-8 cursor-pointer rounded-md border border-border bg-transparent"
+          className="h-10 w-10 cursor-pointer rounded-md border border-border bg-transparent"
+          aria-label="Color"
         />
       </div>
       <Input

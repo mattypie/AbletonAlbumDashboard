@@ -82,10 +82,10 @@ export function RecentResourcesTable({
             <thead>
               <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-3 text-left">Title</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Category</th>
-                <th className="px-4 py-3 text-left">Read Time</th>
-                <th className="px-4 py-3 text-left">Added</th>
+                <th className="hidden px-4 py-3 text-left sm:table-cell">Type</th>
+                <th className="hidden px-4 py-3 text-left md:table-cell">Category</th>
+                <th className="hidden px-4 py-3 text-left lg:table-cell">Read Time</th>
+                <th className="hidden px-4 py-3 text-left md:table-cell">Added</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -118,16 +118,16 @@ export function RecentResourcesTable({
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="hidden px-4 py-3 sm:table-cell">
                         <ResourceTypeBadge type={item.type} />
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                         {CATEGORY_TITLES[item.categoryId]}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="hidden px-4 py-3 text-muted-foreground lg:table-cell">
                         {item.readMinutes} min
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                         {formatAddedDate(item.addedAt)}
                       </td>
                       <td className="px-4 py-3">
