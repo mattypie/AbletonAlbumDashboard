@@ -372,6 +372,7 @@ export async function completeSession(input: {
 
   if (parsed.trackId) {
     revalidatePath(`/tracks/${parsed.trackId}`);
+    revalidatePath(`/m/${parsed.trackId}`);
     revalidatePath(`/focus/${parsed.trackId}`);
   }
   REVALIDATE();

@@ -7,6 +7,7 @@ import {
   getTrack,
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
+import { getSessionTypes } from "@/lib/data/session-types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
@@ -17,6 +18,7 @@ import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
 import { AudioVersionList } from "@/components/audio-version-list";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { ManualSessionEntry } from "@/components/manual-session-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +36,14 @@ export default async function MobileTrackPage({
   params: Promise<{ trackId: string }>;
 }) {
   const { trackId } = await params;
-  const [track, versions, todos, completedTodos] = await Promise.all([
-    getTrack(trackId),
-    getVersionsForTrack(trackId),
-    getOpenActionsForTrack(trackId),
-    getCompletedActionsForTrack(trackId),
-  ]);
+  const [track, versions, todos, completedTodos, sessionTypes] =
+    await Promise.all([
+      getTrack(trackId),
+      getVersionsForTrack(trackId),
+      getOpenActionsForTrack(trackId),
+      getCompletedActionsForTrack(trackId),
+      getSessionTypes(),
+    ]);
 
   if (!track) notFound();
 
@@ -103,12 +107,20 @@ export default async function MobileTrackPage({
         </div>
       </header>
 
-      <Button asChild size="lg" className="w-full">
-        <Link href={`/focus/${track.id}`}>
-          <Play className="h-4 w-4" />
-          Start focus session
-        </Link>
-      </Button>
+      <div className="flex flex-col gap-2">
+        <Button asChild size="lg" className="w-full">
+          <Link href={`/focus/${track.id}`}>
+            <Play className="h-4 w-4" />
+            Start focus session
+          </Link>
+        </Button>
+        <ManualSessionEntry
+          trackId={track.id}
+          tracks={[]}
+          sessionTypes={sessionTypes}
+          variant="mobile"
+        />
+      </div>
 
       <section className="flex flex-col gap-2">
         <SectionHeading>Tasks</SectionHeading>
