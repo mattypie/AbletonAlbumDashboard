@@ -64,18 +64,26 @@ export const STAGE_LABELS: Record<StageKey, string> = {
 };
 
 export const BOTTLENECK_CATEGORIES = [
-  "arrangement",
-  "mix",
-  "sound_design",
   "composition",
+  "sound_design",
+  "arrangement",
+  "mixing",
+  "mastering",
+  "organization",
+  "other",
 ] as const;
 export type BottleneckCategory = (typeof BOTTLENECK_CATEGORIES)[number];
 
-export const BOTTLENECK_LABELS: Record<BottleneckCategory, string> = {
-  arrangement: "Arrangement",
-  mix: "Mix",
-  sound_design: "Sound Design",
+export const BOTTLENECK_LABELS: Record<string, string> = {
   composition: "Composition",
+  sound_design: "Sound Design",
+  arrangement: "Arrangement",
+  mixing: "Mixing",
+  mastering: "Mastering",
+  organization: "Organization",
+  other: "Other",
+  // Legacy value kept renderable for rows stored before the enum expanded.
+  mix: "Mixing",
 };
 
 export const MAX_ACTIVE_TRACKS = 5;
