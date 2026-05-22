@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import {
+  AudioLines,
+  CalendarDays,
   CheckCircle2,
+  Clock,
+  Hourglass,
   MessageSquare,
   MoreHorizontal,
   MoreVertical,
+  Play,
+  type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,25 +26,121 @@ import {
 import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { AddNoteDialog } from "@/components/add-note-dialog";
+import { MarkFocusButton } from "@/components/mark-focus-button";
 import {
   BOTTLENECK_LABELS,
+  currentStageLabel,
   progressFromStages,
   type TrackWithDetails,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDuration, formatMinutes } from "@/lib/utils";
+
+type SessionStats = { seconds: number; count: number };
+
+function MetaStat({
+  icon: Icon,
+  value,
+  emphasis = false,
+}: {
+  icon: LucideIcon;
+  value: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1.5",
+        emphasis ? "text-foreground" : "text-muted-foreground",
+      )}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span className="font-medium tabular-nums">{value}</span>
+    </span>
+  );
+}
+
+function MetaRow({
+  stats,
+  lastWorked,
+  estMinutes,
+}: {
+  stats: SessionStats;
+  lastWorked: string;
+  estMinutes: number;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      <MetaStat icon={Clock} value={formatDuration(stats.seconds)} />
+      <MetaStat
+        icon={AudioLines}
+        value={`${stats.count} ${stats.count === 1 ? "session" : "sessions"}`}
+      />
+      <MetaStat icon={CalendarDays} value={lastWorked} />
+      {estMinutes > 0 && (
+        <MetaStat
+          icon={Hourglass}
+          value={`${formatMinutes(estMinutes)} left`}
+          emphasis
+        />
+      )}
+    </div>
+  );
+}
+
+function TaskBar({ completed, total }: { completed: number; total: number }) {
+  if (total === 0) return null;
+  const pct = Math.round((completed / total) * 100);
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+        <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+        {completed} of {total}
+      </span>
+    </div>
+  );
+}
+
+function BlockerBand({
+  description,
+  category,
+}: {
+  description: string;
+  category?: string;
+}) {
+  return (
+    <div className="rounded-md border border-danger/30 bg-danger/10 px-2.5 py-1.5">
+      <p className="text-sm leading-snug line-clamp-2">
+        <span className="font-semibold text-danger">Blocker:</span>{" "}
+        <span className="text-foreground">{description}</span>
+      </p>
+      {category && (
+        <p className="mt-0.5 text-[11px] uppercase tracking-wide text-danger/80">
+          {category}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function TrackCard({
   track,
   recommended = false,
+  sessionStats,
 }: {
   track: TrackWithDetails;
   recommended?: boolean;
+  sessionStats?: SessionStats;
 }) {
   const progress = progressFromStages(track.stages);
-  const [genre, ...descriptors] = track.tags;
-  const lastWorkedLabel = track.last_worked_at
-    ? `Last worked: ${format(new Date(track.last_worked_at), "MMM d, yyyy")}`
-    : "Never worked on yet";
+  const [genre] = track.tags;
+  const statusLabel = currentStageLabel(track.stages);
+  const stats = sessionStats ?? { seconds: 0, count: 0 };
+  const lastWorked = track.last_worked_at
+    ? format(new Date(track.last_worked_at), "MMM d, yyyy")
+    : "Never";
+  const totalTasks = track.openTaskCount + track.completedTaskCount;
   const meta = [
     track.song_key ? track.song_key : null,
     track.bpm ? `${track.bpm} BPM` : null,
@@ -48,12 +150,12 @@ export function TrackCard({
     <Card className={cn(recommended && "ring-1 ring-primary/40")}>
       {/* Mobile layout (<md) */}
       <div className="md:hidden">
-        <Link
-          href={`/m/${track.id}`}
-          className="flex items-start gap-4 p-4"
-          aria-label={`Open ${track.name}`}
-        >
-          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+        <div className="flex items-start gap-4 p-4">
+          <Link
+            href={`/m/${track.id}`}
+            aria-label={`Open ${track.name}`}
+            className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
+          >
             {track.cover_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -66,57 +168,64 @@ export function TrackCard({
                 {track.name.slice(0, 2).toUpperCase()}
               </div>
             )}
-          </div>
+          </Link>
 
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="min-w-0 flex-1 text-xl font-semibold leading-tight line-clamp-2">
-                {track.name}
-              </h3>
-              <ProgressRing
-                value={progress}
-                size={56}
-                stroke={5}
-                className="shrink-0"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              {genre && <Badge variant="primary">{genre}</Badge>}
-              <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                {progress}%
-              </span>
-            </div>
-
-            {(track.bottleneck || track.primaryAction) && (
-              <div className="flex flex-col gap-1 text-sm">
-                {track.bottleneck && (
-                  <p className="line-clamp-2 text-foreground">
-                    <span className="font-semibold text-danger">Blocker:</span>{" "}
-                    {track.bottleneck.description}
-                  </p>
-                )}
-                {track.primaryAction && (
-                  <p className="line-clamp-2 text-muted-foreground">
-                    <span className="font-semibold text-foreground">
-                      Next:
-                    </span>{" "}
-                    {track.primaryAction.description}
-                  </p>
-                )}
+            <div className="flex items-start justify-between gap-2">
+              <Link href={`/m/${track.id}`} className="min-w-0 flex-1">
+                <h3 className="text-xl font-semibold leading-tight line-clamp-2">
+                  {track.name}
+                </h3>
+              </Link>
+              <div className="flex shrink-0 items-center gap-1">
+                <MarkFocusButton trackId={track.id} isFocus={track.is_focus} />
+                <ProgressRing value={progress} size={56} stroke={5} />
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {genre && <Badge variant="primary">{genre}</Badge>}
+              <Badge variant="default">{statusLabel}</Badge>
+            </div>
+
+            <MetaRow
+              stats={stats}
+              lastWorked={lastWorked}
+              estMinutes={track.estMinutesRemaining}
+            />
+
+            <TaskBar
+              completed={track.completedTaskCount}
+              total={totalTasks}
+            />
+
+            {track.bottleneck && (
+              <BlockerBand description={track.bottleneck.description} />
+            )}
+            {track.primaryAction && (
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">Next:</span>{" "}
+                {track.primaryAction.description}
+              </p>
             )}
           </div>
-        </Link>
+        </div>
 
         <div className="flex items-stretch border-t border-border">
           <Link
+            href={`/focus/${track.id}`}
+            className="flex flex-1 items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium text-primary"
+          >
+            <Play className="h-4 w-4" />
+            <span>Resume</span>
+          </Link>
+          <Link
             href={`/m/${track.id}`}
-            className="flex flex-1 items-center justify-center gap-2 px-3 py-3 text-sm font-medium text-primary"
+            className="flex flex-1 items-center justify-center gap-1.5 border-l border-border px-2 py-3 text-sm font-medium text-foreground"
           >
             <CheckCircle2 className="h-4 w-4" />
             <span>
-              View tasks
+              Tasks
               {track.openTaskCount > 0 ? ` (${track.openTaskCount})` : ""}
             </span>
           </Link>
@@ -128,10 +237,10 @@ export function TrackCard({
           >
             <button
               type="button"
-              className="flex flex-1 items-center justify-center gap-2 border-l border-border px-3 py-3 text-sm font-medium text-foreground"
+              className="flex flex-1 items-center justify-center gap-1.5 border-l border-border px-2 py-3 text-sm font-medium text-foreground"
             >
               <MessageSquare className="h-4 w-4" />
-              <span>Add note</span>
+              <span>Note</span>
             </button>
           </AddNoteDialog>
 
@@ -139,16 +248,18 @@ export function TrackCard({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex w-14 shrink-0 items-center justify-center border-l border-border text-muted-foreground"
+                className="flex w-12 shrink-0 items-center justify-center border-l border-border text-muted-foreground"
                 aria-label="Track actions"
               >
                 <MoreHorizontal className="h-5 w-5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/focus/${track.id}`}>Focus session</Link>
-              </DropdownMenuItem>
+              <MarkFocusButton
+                trackId={track.id}
+                isFocus={track.is_focus}
+                variant="menu"
+              />
               <DropdownMenuItem asChild>
                 <Link href={`/m/${track.id}`}>Open detail</Link>
               </DropdownMenuItem>
@@ -164,8 +275,8 @@ export function TrackCard({
         </div>
       </div>
 
-      {/* Desktop layout (>=md) — unchanged */}
-      <div className="hidden md:grid md:grid-cols-[88px_minmax(0,1.6fr)_auto_minmax(0,1.4fr)_minmax(0,1.4fr)] md:items-center md:gap-5 md:p-4">
+      {/* Desktop layout (>=md) */}
+      <div className="hidden md:grid md:grid-cols-[88px_minmax(0,1.7fr)_auto_minmax(0,1.3fr)_minmax(0,1.3fr)] md:items-start md:gap-5 md:p-4">
         <div className="relative h-20 w-20 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
           {track.cover_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -188,24 +299,28 @@ export function TrackCard({
           >
             {track.name}
           </Link>
-          {genre && (
-            <div className="mt-1.5">
-              <Badge variant="primary">{genre}</Badge>
-            </div>
-          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {genre && <Badge variant="primary">{genre}</Badge>}
+            <Badge variant="default">{statusLabel}</Badge>
+          </div>
           {meta.length > 0 && (
             <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
               {meta.join(" · ")}
             </p>
           )}
-          {descriptors.length > 0 && (
-            <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">
-              {descriptors.join(", ")}
-            </p>
-          )}
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            {lastWorkedLabel}
-          </p>
+          <div className="mt-2">
+            <MetaRow
+              stats={stats}
+              lastWorked={lastWorked}
+              estMinutes={track.estMinutesRemaining}
+            />
+          </div>
+          <div className="mt-2 max-w-[16rem]">
+            <TaskBar
+              completed={track.completedTaskCount}
+              total={totalTasks}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col items-center gap-1">
@@ -220,21 +335,17 @@ export function TrackCard({
             Current Bottleneck
           </div>
           {track.bottleneck ? (
-            <>
-              <p
-                className={cn(
-                  "mt-1 text-sm font-semibold leading-snug line-clamp-2",
-                  "text-danger",
-                )}
-              >
-                {track.bottleneck.description}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-                {BOTTLENECK_LABELS[
-                  track.bottleneck.category as keyof typeof BOTTLENECK_LABELS
-                ] ?? track.bottleneck.category}
-              </p>
-            </>
+            <div className="mt-1">
+              <BlockerBand
+                description={track.bottleneck.description}
+                category={
+                  BOTTLENECK_LABELS[
+                    track.bottleneck
+                      .category as keyof typeof BOTTLENECK_LABELS
+                  ] ?? track.bottleneck.category
+                }
+              />
+            </div>
           ) : (
             <p className="mt-1 text-sm text-muted-foreground">
               No active bottleneck
@@ -262,9 +373,13 @@ export function TrackCard({
               variant={recommended ? "default" : "outline"}
               className="mt-2"
             >
-              <Link href={`/focus/${track.id}`}>Continue</Link>
+              <Link href={`/focus/${track.id}`}>
+                <Play className="h-4 w-4" />
+                Resume session
+              </Link>
             </Button>
           </div>
+          <MarkFocusButton trackId={track.id} isFocus={track.is_focus} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -277,6 +392,11 @@ export function TrackCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <MarkFocusButton
+                trackId={track.id}
+                isFocus={track.is_focus}
+                variant="menu"
+              />
               <DropdownMenuItem asChild>
                 <Link href={`/tracks/${track.id}`}>Open detail</Link>
               </DropdownMenuItem>
