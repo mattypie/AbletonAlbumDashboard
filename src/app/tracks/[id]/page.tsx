@@ -19,12 +19,14 @@ import { AudioVersionList } from "@/components/audio-version-list";
 import { CopyPathButton } from "@/components/copy-path-button";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
+import { ManualSessionEntry } from "@/components/manual-session-dialog";
 import {
   getCompletedActionsForTrack,
   getOpenActionsForTrack,
   getTrack,
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
+import { getSessionTypes } from "@/lib/data/session-types";
 
 export const dynamic = "force-dynamic";
 
@@ -37,12 +39,14 @@ export default async function TrackDetailPage({
   if (await isMobileUserAgent()) {
     redirect(`/m/${id}`);
   }
-  const [track, versions, completedTodos, openTodos] = await Promise.all([
-    getTrack(id),
-    getVersionsForTrack(id),
-    getCompletedActionsForTrack(id),
-    getOpenActionsForTrack(id),
-  ]);
+  const [track, versions, completedTodos, openTodos, sessionTypes] =
+    await Promise.all([
+      getTrack(id),
+      getVersionsForTrack(id),
+      getCompletedActionsForTrack(id),
+      getOpenActionsForTrack(id),
+      getSessionTypes(),
+    ]);
   if (!track) notFound();
 
   const [genre, ...descriptors] = track.tags;
@@ -128,6 +132,12 @@ export default async function TrackDetailPage({
               Start focus session
             </Link>
           </Button>
+          <ManualSessionEntry
+            trackId={track.id}
+            tracks={[]}
+            sessionTypes={sessionTypes}
+            variant="desktop"
+          />
         </div>
       </div>
 

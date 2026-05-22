@@ -5,6 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
+import { ManualSessionEntry } from "@/components/manual-session-dialog";
+import { getAllTracks } from "@/lib/data/tracks";
+import { getSessionTypes } from "@/lib/data/session-types";
 
 export const dynamic = "force-dynamic";
 
@@ -42,18 +45,29 @@ function formatDuration(seconds: number | null) {
 }
 
 export default async function SessionsPage() {
-  const sessions = await fetchSessions();
+  const [sessions, tracks, sessionTypes] = await Promise.all([
+    fetchSessions(),
+    getAllTracks(),
+    getSessionTypes(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Focus Sessions
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Your most recent {sessions.length} session
-          {sessions.length === 1 ? "" : "s"}.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Focus Sessions
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Your most recent {sessions.length} session
+            {sessions.length === 1 ? "" : "s"}.
+          </p>
+        </div>
+        <ManualSessionEntry
+          tracks={tracks}
+          sessionTypes={sessionTypes}
+          variant="desktop"
+        />
       </header>
 
       {sessions.length === 0 ? (
