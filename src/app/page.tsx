@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { Plus, Sun } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  ListMusic,
+  Plus,
+  Sun,
+  TrendingUp,
+} from "lucide-react";
 import { TrackCard } from "@/components/track-card";
 import { RecommendationCard } from "@/components/recommendation-card";
 import { TrackSortControl } from "@/components/track-sort-control";
 import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
-import { SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
+import { LibraryStatCard } from "@/components/library/library-stat-card";
+import { DEFAULT_SORT, SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -14,29 +22,16 @@ import {
   getTracksWithoutAlbum,
 } from "@/lib/data/tracks";
 import { getActiveAlbum, listUpcomingAlbums } from "@/lib/data/album";
-import { recommendTrack } from "@/lib/recommend";
-import { getServerSupabase } from "@/lib/supabase/server";
-import { OWNER_ID } from "@/lib/owner";
+import {
+  getSessionStatsByTrack,
+  type SessionStats,
+} from "@/lib/data/sessions";
+import { suggestFocusTrack } from "@/lib/focus";
+import type { Recommendation } from "@/lib/recommend";
+import { formatDuration, formatMinutes } from "@/lib/utils";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-async function fetchSessionsLast7DaysByTrack() {
-  const supabase = getServerSupabase();
-  const since = new Date();
-  since.setDate(since.getDate() - 7);
-  const { data } = await supabase
-    .from("sessions")
-    .select("track_id, tracks!inner(owner_id)")
-    .eq("tracks.owner_id", OWNER_ID)
-    .gte("started_at", since.toISOString());
-  const map = new Map<string, number>();
-  (data ?? []).forEach((row) => {
-    if (!row.track_id) return;
-    map.set(row.track_id, (map.get(row.track_id) ?? 0) + 1);
-  });
-  return map;
-}
 
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
@@ -51,32 +46,58 @@ function isSortValue(v: string | undefined): v is SortValue {
 function sortTracks(
   tracks: TrackWithDetails[],
   sort: SortValue,
-  scoreById: Map<string, number>,
+  sessionStats: Map<string, SessionStats>,
 ): TrackWithDetails[] {
   const list = [...tracks];
   switch (sort) {
-    case "recent":
+    case "neglected":
       list.sort((a, b) => {
-        const ax = a.last_worked_at ? new Date(a.last_worked_at).getTime() : 0;
-        const bx = b.last_worked_at ? new Date(b.last_worked_at).getTime() : 0;
-        return bx - ax;
+        const ax = a.last_worked_at
+          ? new Date(a.last_worked_at).getTime()
+          : 0;
+        const bx = b.last_worked_at
+          ? new Date(b.last_worked_at).getTime()
+          : 0;
+        return ax - bx;
       });
       break;
-    case "progress":
+    case "time":
+      list.sort(
+        (a, b) =>
+          (sessionStats.get(b.id)?.seconds ?? 0) -
+          (sessionStats.get(a.id)?.seconds ?? 0),
+      );
+      break;
+    case "blocked":
+      list.sort((a, b) => {
+        const ab = a.bottleneck ? 1 : 0;
+        const bb = b.bottleneck ? 1 : 0;
+        if (ab !== bb) return bb - ab;
+        return progressFromStages(b.stages) - progressFromStages(a.stages);
+      });
+      break;
+    case "finish":
+    default:
       list.sort(
         (a, b) => progressFromStages(b.stages) - progressFromStages(a.stages),
       );
-      break;
-    case "name":
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    case "recommended":
-    default:
-      list.sort(
-        (a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0),
-      );
   }
   return list;
+}
+
+function buildFocusSuggestion(
+  tracks: TrackWithDetails[],
+): Recommendation | null {
+  const pinned = tracks.find((t) => t.is_focus);
+  const track = pinned ?? suggestFocusTrack(tracks);
+  if (!track) return null;
+  const progress = progressFromStages(track.stages);
+  const reason = pinned
+    ? "Pinned focus"
+    : track.estMinutesRemaining > 0
+      ? `${progress}% done · ${formatMinutes(track.estMinutesRemaining)} left`
+      : `Closest to finish · ${progress}% done`;
+  return { track, primaryAction: track.primaryAction, reason, score: 0 };
 }
 
 export default async function DashboardPage({
@@ -85,12 +106,12 @@ export default async function DashboardPage({
   searchParams?: Promise<{ sort?: string }>;
 }) {
   const sp = (await searchParams) ?? {};
-  const sort: SortValue = isSortValue(sp.sort) ? sp.sort : "recommended";
+  const sort: SortValue = isSortValue(sp.sort) ? sp.sort : DEFAULT_SORT;
 
-  const [activeAlbum, upcomingAlbums, sessionCounts] = await Promise.all([
+  const [activeAlbum, upcomingAlbums, sessionStats] = await Promise.all([
     getActiveAlbum(),
     listUpcomingAlbums(4),
-    fetchSessionsLast7DaysByTrack(),
+    getSessionStatsByTrack(),
   ]);
 
   // Active tracks live in the active album. If no album is set up yet (fresh
@@ -105,14 +126,21 @@ export default async function DashboardPage({
   // Tracks without an album: surface them so they don't get lost.
   const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
 
-  const recommendation = recommendTrack(activeTracks, sessionCounts);
+  const focus = buildFocusSuggestion(activeTracks);
+  const sorted = sortTracks(activeTracks, sort, sessionStats);
 
-  const scoreById = new Map<string, number>();
-  activeTracks.forEach((t) => {
-    const r = recommendTrack([t], sessionCounts);
-    scoreById.set(t.id, r?.score ?? 0);
-  });
-  const sorted = sortTracks(activeTracks, sort, scoreById);
+  // Summary metrics across the active tracks.
+  const totalSeconds = activeTracks.reduce(
+    (acc, t) => acc + (sessionStats.get(t.id)?.seconds ?? 0),
+    0,
+  );
+  const tasksCompleted = activeTracks.reduce(
+    (acc, t) => acc + t.completedTaskCount,
+    0,
+  );
+  const nearCompletion = activeTracks.filter(
+    (t) => progressFromStages(t.stages) > 60,
+  ).length;
 
   const now = new Date();
   const greeting = greetingForHour(now.getHours());
@@ -163,6 +191,34 @@ export default async function DashboardPage({
         </div>
       </header>
 
+      {activeTracks.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <LibraryStatCard
+            label="Active Tracks"
+            value={activeTracks.length}
+            icon={ListMusic}
+          />
+          <LibraryStatCard
+            label="Total Time Worked"
+            value={formatDuration(totalSeconds)}
+            icon={Clock}
+          />
+          <LibraryStatCard
+            label="Tasks Completed"
+            value={tasksCompleted}
+            icon={CheckCircle2}
+          />
+          <LibraryStatCard
+            label="Near Completion"
+            value={nearCompletion}
+            icon={TrendingUp}
+            hint="Tracks over 60% done"
+          />
+        </div>
+      )}
+
+      {focus && <RecommendationCard rec={focus} />}
+
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -196,7 +252,8 @@ export default async function DashboardPage({
               <TrackCard
                 key={track.id}
                 track={track}
-                recommended={recommendation?.track.id === track.id}
+                recommended={focus?.track.id === track.id}
+                sessionStats={sessionStats.get(track.id)}
               />
             ))}
           </div>
@@ -225,8 +282,6 @@ export default async function DashboardPage({
           </Card>
         </section>
       )}
-
-      <RecommendationCard rec={recommendation} />
     </div>
   );
 }

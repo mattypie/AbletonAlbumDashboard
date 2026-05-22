@@ -1,8 +1,10 @@
 export const SORT_OPTIONS = [
-  { value: "recommended", label: "Recommended" },
-  { value: "recent", label: "Last worked" },
-  { value: "progress", label: "Progress" },
-  { value: "name", label: "Name" },
+  { value: "finish", label: "Closest to Finish" },
+  { value: "neglected", label: "Most Neglected" },
+  { value: "time", label: "Most Time Invested" },
+  { value: "blocked", label: "Blocked" },
 ] as const;
 
 export type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
+export const DEFAULT_SORT: SortValue = "finish";

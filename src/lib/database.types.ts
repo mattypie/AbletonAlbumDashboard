@@ -499,6 +499,7 @@ export type Database = {
           cover_image_url: string | null;
           created_at: string;
           id: string;
+          is_focus: boolean;
           last_worked_at: string | null;
           name: string;
           notes: string;
@@ -515,6 +516,7 @@ export type Database = {
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
+          is_focus?: boolean;
           last_worked_at?: string | null;
           name: string;
           notes?: string;
@@ -531,6 +533,7 @@ export type Database = {
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
+          is_focus?: boolean;
           last_worked_at?: string | null;
           name?: string;
           notes?: string;

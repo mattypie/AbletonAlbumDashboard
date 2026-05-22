@@ -190,6 +190,41 @@ export async function setTrackStatus(id: string, status: string) {
   revalidatePath(`/tracks/${id}`);
 }
 
+export async function toggleTrackFocus(id: string) {
+  const supabase = getServerSupabase();
+  const { data: current, error: readError } = await supabase
+    .from("tracks")
+    .select("is_focus")
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  const next = !current?.is_focus;
+
+  if (next) {
+    // Only one focus per owner — clear any existing pin first.
+    const { error: clearError } = await supabase
+      .from("tracks")
+      .update({ is_focus: false })
+      .eq("owner_id", OWNER_ID)
+      .eq("is_focus", true);
+    if (clearError) throw clearError;
+  }
+
+  const { error } = await supabase
+    .from("tracks")
+    .update({ is_focus: next })
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id);
+  if (error) throw error;
+
+  revalidatePath("/");
+  revalidatePath("/tracks");
+  revalidatePath(`/tracks/${id}`);
+  revalidatePath(`/m/${id}`);
+}
+
 export async function deleteTrack(id: string) {
   const supabase = getServerSupabase();
   const { error } = await supabase

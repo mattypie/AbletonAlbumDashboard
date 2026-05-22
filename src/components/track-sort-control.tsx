@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
+import { DEFAULT_SORT, SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
 
 export function TrackSortControl({ current }: { current: SortValue }) {
   const router = useRouter();
@@ -17,14 +17,14 @@ export function TrackSortControl({ current }: { current: SortValue }) {
 
   const setSort = (value: SortValue) => {
     const next = new URLSearchParams(params.toString());
-    if (value === "recommended") next.delete("sort");
+    if (value === DEFAULT_SORT) next.delete("sort");
     else next.set("sort", value);
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
 
   const currentLabel =
-    SORT_OPTIONS.find((o) => o.value === current)?.label ?? "Recommended";
+    SORT_OPTIONS.find((o) => o.value === current)?.label ?? "Closest to Finish";
 
   return (
     <DropdownMenu>

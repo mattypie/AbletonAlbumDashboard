@@ -86,6 +86,8 @@ export type TrackWithDetails = TrackRow & {
   bottleneck: BottleneckRow | null;
   primaryAction: ActionRow | null;
   openTaskCount: number;
+  completedTaskCount: number;
+  estMinutesRemaining: number;
 };
 
 export function progressFromStages(stages: StageRow[]): number {
@@ -95,4 +97,15 @@ export function progressFromStages(stages: StageRow[]): number {
     return acc + (s.complete ? 100 : 0);
   }, 0);
   return Math.round(total / stages.length);
+}
+
+// Human-readable current stage: the first incomplete stage in workflow order.
+// Falls back to the final stage label once everything is complete.
+export function currentStageLabel(stages: StageRow[]): string {
+  for (const key of STAGE_KEYS) {
+    const stage = stages.find((s) => s.stage_key === key);
+    const done = stage?.complete || (stage?.percent ?? 0) >= 100;
+    if (!done) return STAGE_LABELS[key];
+  }
+  return STAGE_LABELS[STAGE_KEYS[STAGE_KEYS.length - 1]];
 }
