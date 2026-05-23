@@ -27,12 +27,14 @@ export function FocusRunner({
   plannedSession,
   sessionTypes,
   tracks,
+  trackTodos,
 }: {
   track: TrackRow;
   primaryAction: ActionRow | null;
   plannedSession?: CalendarSessionRow | null;
   sessionTypes?: SessionTypeRow[];
   tracks?: TrackRow[];
+  trackTodos?: ActionRow[];
 }) {
   const router = useRouter();
   const ctx = useFocusSession();
@@ -74,15 +76,26 @@ export function FocusRunner({
   const notes = isSameTrack ? ctx.notes : "";
 
   const start = () => {
+    const plannedTodos = (plannedSession?.todos ?? []).map((t) => ({
+      id: t.id,
+      description: t.description,
+      done: t.done,
+    }));
+    // No planned session (or it has no todos) — seed the checklist from the
+    // track's own open to-dos so the session doesn't start blank.
+    const initialTodos =
+      plannedTodos.length > 0
+        ? plannedTodos
+        : (trackTodos ?? []).map((t) => ({
+            id: t.id,
+            description: t.description,
+            done: t.completed_at != null,
+          }));
     ctx.start({
       trackId: track.id,
       trackName: track.name,
       plannedSessionId: plannedSession?.id ?? null,
-      initialTodos: (plannedSession?.todos ?? []).map((t) => ({
-        id: t.id,
-        description: t.description,
-        done: t.done,
-      })),
+      initialTodos,
     });
   };
 

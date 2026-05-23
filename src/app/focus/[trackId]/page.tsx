@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { FocusRunner } from "@/components/focus-runner";
-import { getTrack } from "@/lib/data/tracks";
+import { getTrack, getOpenActionsForTrack } from "@/lib/data/tracks";
 import { getSessionWithTodos } from "@/lib/data/calendar-sessions";
 import { getSessionTypes } from "@/lib/data/session-types";
 import { getAllTracks } from "@/lib/data/tracks";
@@ -19,10 +19,11 @@ export default async function FocusPage({
   const track = await getTrack(trackId);
   if (!track) notFound();
 
-  const [plannedSession, sessionTypes, tracks] = await Promise.all([
+  const [plannedSession, sessionTypes, tracks, trackTodos] = await Promise.all([
     sp.session ? getSessionWithTodos(sp.session) : Promise.resolve(null),
     getSessionTypes(),
     getAllTracks(),
+    getOpenActionsForTrack(trackId),
   ]);
 
   return (
@@ -32,6 +33,7 @@ export default async function FocusPage({
       plannedSession={plannedSession}
       sessionTypes={sessionTypes}
       tracks={tracks}
+      trackTodos={trackTodos}
     />
   );
 }
