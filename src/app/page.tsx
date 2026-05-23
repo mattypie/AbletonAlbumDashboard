@@ -9,10 +9,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
-import { TrackSortControl } from "@/components/track-sort-control";
 import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
-import { DEFAULT_SORT, SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -21,10 +19,7 @@ import {
   getTracksWithoutAlbum,
 } from "@/lib/data/tracks";
 import { getActiveAlbum, listUpcomingAlbums } from "@/lib/data/album";
-import {
-  getSessionStatsByTrack,
-  type SessionStats,
-} from "@/lib/data/sessions";
+import { getSessionStatsByTrack } from "@/lib/data/sessions";
 import { formatDuration } from "@/lib/utils";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 
@@ -36,60 +31,13 @@ function greetingForHour(hour: number) {
   return "Good evening";
 }
 
-function isSortValue(v: string | undefined): v is SortValue {
-  return SORT_OPTIONS.some((o) => o.value === v);
+function sortTracks(tracks: TrackWithDetails[]): TrackWithDetails[] {
+  return [...tracks].sort(
+    (a, b) => progressFromStages(b.stages) - progressFromStages(a.stages),
+  );
 }
 
-function sortTracks(
-  tracks: TrackWithDetails[],
-  sort: SortValue,
-  sessionStats: Map<string, SessionStats>,
-): TrackWithDetails[] {
-  const list = [...tracks];
-  switch (sort) {
-    case "neglected":
-      list.sort((a, b) => {
-        const ax = a.last_worked_at
-          ? new Date(a.last_worked_at).getTime()
-          : 0;
-        const bx = b.last_worked_at
-          ? new Date(b.last_worked_at).getTime()
-          : 0;
-        return ax - bx;
-      });
-      break;
-    case "time":
-      list.sort(
-        (a, b) =>
-          (sessionStats.get(b.id)?.seconds ?? 0) -
-          (sessionStats.get(a.id)?.seconds ?? 0),
-      );
-      break;
-    case "blocked":
-      list.sort((a, b) => {
-        const ab = a.bottleneck ? 1 : 0;
-        const bb = b.bottleneck ? 1 : 0;
-        if (ab !== bb) return bb - ab;
-        return progressFromStages(b.stages) - progressFromStages(a.stages);
-      });
-      break;
-    case "finish":
-    default:
-      list.sort(
-        (a, b) => progressFromStages(b.stages) - progressFromStages(a.stages),
-      );
-  }
-  return list;
-}
-
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ sort?: string }>;
-}) {
-  const sp = (await searchParams) ?? {};
-  const sort: SortValue = isSortValue(sp.sort) ? sp.sort : DEFAULT_SORT;
-
+export default async function DashboardPage() {
   const [activeAlbum, upcomingAlbums, sessionStats] = await Promise.all([
     getActiveAlbum(),
     listUpcomingAlbums(4),
@@ -108,7 +56,7 @@ export default async function DashboardPage({
   // Tracks without an album: surface them so they don't get lost.
   const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
 
-  const sorted = sortTracks(activeTracks, sort, sessionStats);
+  const sorted = sortTracks(activeTracks);
 
   // Summary metrics across the active tracks.
   const totalSeconds = activeTracks.reduce(
@@ -199,12 +147,11 @@ export default async function DashboardPage({
       )}
 
       <section>
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             {activeAlbum ? "Active album" : "Your active tracks"} ·{" "}
             {sorted.length} {sorted.length === 1 ? "track" : "tracks"}
           </h2>
-          <TrackSortControl current={sort} />
         </div>
 
         {sorted.length === 0 ? (
