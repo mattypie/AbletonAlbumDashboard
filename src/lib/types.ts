@@ -16,6 +16,8 @@ export type SessionTypeRow =
   Database["public"]["Tables"]["session_types"]["Row"];
 export type SessionTodoRow =
   Database["public"]["Tables"]["session_todos"]["Row"];
+export type SessionActivityRow =
+  Database["public"]["Tables"]["session_activities"]["Row"];
 export type SessionTemplateRow =
   Database["public"]["Tables"]["session_templates"]["Row"];
 export type SessionTemplateTodoRow =

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { RatingPicker } from "@/components/ui/rating-picker";
 import { completeSession } from "@/app/actions/sessions";
 import { TrackPicker } from "./track-picker";
 import { SessionTypePicker } from "./session-type-picker";
@@ -366,42 +367,6 @@ export function SessionCompleteDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function RatingPicker({
-  label,
-  value,
-  onChange,
-  hint,
-}: {
-  label: string;
-  value: number | null;
-  onChange: (v: number | null) => void;
-  hint?: string;
-}) {
-  return (
-    <div className="grid gap-1.5">
-      <Label>{label}</Label>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(value === n ? null : n)}
-            className={cn(
-              "h-8 w-8 rounded-md border text-sm font-medium transition-colors",
-              value === n
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-surface hover:bg-surface-2",
-            )}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-    </div>
   );
 }
 

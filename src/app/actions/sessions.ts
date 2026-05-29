@@ -6,6 +6,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { setActiveBottleneck } from "@/app/actions/bottlenecks";
 import { completeAction } from "@/app/actions/actions";
 import { BOTTLENECK_CATEGORIES } from "@/lib/types";
+import { PRODUCTION_ACTIVITY_KEYS } from "@/lib/production-activities";
 import type { Database } from "@/lib/database.types";
 
 type SessionUpdate = Database["public"]["Tables"]["sessions"]["Update"];
@@ -171,6 +172,16 @@ const completeSchema = z.object({
   notesMd: z.string().max(10000).optional().or(z.literal("")),
   energyRating: z.number().int().min(1).max(5).optional().nullable(),
   enjoymentRating: z.number().int().min(1).max(5).optional().nullable(),
+  progressImpact: z.number().int().min(1).max(5).optional().nullable(),
+  activities: z
+    .array(
+      z.object({
+        key: z.enum(PRODUCTION_ACTIVITY_KEYS),
+        minutes: z.number().int().min(0),
+        note: z.string().max(2000).optional().or(z.literal("")),
+      }),
+    )
+    .optional(),
   newBottleneckDescription: z.string().max(500).optional().or(z.literal("")),
   newBottleneckCategory: z
     .enum(BOTTLENECK_CATEGORIES as unknown as [string, ...string[]])
@@ -199,6 +210,12 @@ export async function completeSession(input: {
   notesMd?: string;
   energyRating?: number | null;
   enjoymentRating?: number | null;
+  progressImpact?: number | null;
+  activities?: Array<{
+    key: (typeof PRODUCTION_ACTIVITY_KEYS)[number];
+    minutes: number;
+    note?: string;
+  }>;
   newBottleneckDescription?: string;
   newBottleneckCategory?: string;
   completeAction?: boolean;
@@ -220,6 +237,7 @@ export async function completeSession(input: {
     new_bottleneck: parsed.newBottleneckDescription || null,
     energy_rating: parsed.energyRating ?? null,
     enjoyment_rating: parsed.enjoymentRating ?? null,
+    progress_impact_rating: parsed.progressImpact ?? null,
     status: "completed" as const,
   };
 
@@ -239,6 +257,33 @@ export async function completeSession(input: {
       .single();
     if (error) throw error;
     resolvedSessionId = data.id;
+  }
+
+  // Replace the session's per-activity time allocation. Delete-then-insert is
+  // idempotent and safe to re-run (e.g. re-completing a session), and we only
+  // persist rows that carry signal — minutes > 0 or a non-empty note.
+  if (parsed.activities && resolvedSessionId) {
+    const sessionId = resolvedSessionId;
+    const { error: delErr } = await supabase
+      .from("session_activities")
+      .delete()
+      .eq("session_id", sessionId);
+    if (delErr) throw delErr;
+
+    const rows = parsed.activities
+      .filter((a) => a.minutes > 0 || (a.note ?? "").trim().length > 0)
+      .map((a) => ({
+        session_id: sessionId,
+        activity_key: a.key,
+        minutes: a.minutes,
+        note: (a.note ?? "").trim() || null,
+      }));
+    if (rows.length > 0) {
+      const { error: insErr } = await supabase
+        .from("session_activities")
+        .insert(rows);
+      if (insErr) throw insErr;
+    }
   }
 
   // Sync session_todos to the supplied list. Matches by description so any

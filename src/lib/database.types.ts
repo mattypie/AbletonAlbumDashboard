@@ -220,6 +220,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      session_activities: {
+        Row: {
+          activity_key: string;
+          created_at: string;
+          id: string;
+          minutes: number;
+          note: string | null;
+          session_id: string;
+        };
+        Insert: {
+          activity_key: string;
+          created_at?: string;
+          id?: string;
+          minutes?: number;
+          note?: string | null;
+          session_id: string;
+        };
+        Update: {
+          activity_key?: string;
+          created_at?: string;
+          id?: string;
+          minutes?: number;
+          note?: string | null;
+          session_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_activities_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       session_todos: {
         Row: {
           carried_from: string | null;
@@ -303,6 +338,7 @@ export type Database = {
           notes_md: string | null;
           planned_end: string | null;
           planned_start: string | null;
+          progress_impact_rating: number | null;
           recurrence_id: string | null;
           session_type_id: string | null;
           started_at: string | null;
@@ -324,6 +360,7 @@ export type Database = {
           notes_md?: string | null;
           planned_end?: string | null;
           planned_start?: string | null;
+          progress_impact_rating?: number | null;
           recurrence_id?: string | null;
           session_type_id?: string | null;
           started_at?: string | null;
@@ -345,6 +382,7 @@ export type Database = {
           notes_md?: string | null;
           planned_end?: string | null;
           planned_start?: string | null;
+          progress_impact_rating?: number | null;
           recurrence_id?: string | null;
           session_type_id?: string | null;
           started_at?: string | null;
