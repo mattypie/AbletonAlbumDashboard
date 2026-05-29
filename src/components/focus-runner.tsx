@@ -13,6 +13,7 @@ import {
 } from "@/components/session-log-dialog";
 import { SessionCompleteDialog } from "@/components/calendar/session-complete-dialog";
 import { SessionTodoChecklist } from "@/components/calendar/session-todo-checklist";
+import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { useFocusSession } from "@/components/focus-session-provider";
 import type {
   ActionRow,
@@ -89,23 +90,14 @@ export function FocusRunner({
     "Focus";
 
   const start = () => {
-    const plannedTodos = (plannedSession?.todos ?? []).map((t) => ({
+    // Track sessions own their to-dos through the live TrackTodoList (which
+    // writes straight to the track), so only the track-less / planned-session
+    // flows seed the ephemeral checklist here.
+    const initialTodos = (plannedSession?.todos ?? []).map((t) => ({
       id: t.id,
       description: t.description,
       done: t.done,
     }));
-    // No planned session (or it has no todos) — seed the checklist from the
-    // track's own open to-dos so the session doesn't start blank.
-    const initialTodos =
-      plannedTodos.length > 0
-        ? plannedTodos
-        : track
-          ? (trackTodos ?? []).map((t) => ({
-              id: t.id,
-              description: t.description,
-              done: t.completed_at != null,
-            }))
-          : [];
     ctx.start({
       trackId: track?.id ?? null,
       trackName: track?.name ?? sessionType?.name ?? null,
@@ -165,11 +157,19 @@ export function FocusRunner({
           </p>
         )}
         <div className="mx-auto mt-2 w-full max-w-md text-left">
-          <SessionTodoChecklist
-            items={todos}
-            onChange={ctx.setTodos}
-            placeholder="Add a todo for this session…"
-          />
+          {track ? (
+            <TrackTodoList
+              trackId={track.id}
+              initial={trackTodos ?? []}
+              variant="mobile"
+            />
+          ) : (
+            <SessionTodoChecklist
+              items={todos}
+              onChange={ctx.setTodos}
+              placeholder="Add a todo for this session…"
+            />
+          )}
         </div>
         <div className="mx-auto mt-1 w-full max-w-md text-left">
           <Label htmlFor="focus-notes" className="text-xs text-muted-foreground">
@@ -251,7 +251,7 @@ export function FocusRunner({
           tracks={tracks!}
           initialSessionTypeId={sessionType?.id ?? ctx.sessionTypeId ?? null}
           initialTrackId={track?.id ?? null}
-          initialTodos={todos}
+          initialTodos={track ? undefined : todos}
           initialNotes={notes}
           onCompleted={() => {
             setLogOpen(false);
@@ -266,7 +266,6 @@ export function FocusRunner({
           trackId={track.id}
           primaryAction={primaryAction}
           draft={draft}
-          todos={todos}
           notes={notes}
           onCompleted={() => {
             setLogOpen(false);

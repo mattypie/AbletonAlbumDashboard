@@ -7,6 +7,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 const revalidateAll = (trackId: string) => {
   revalidatePath(`/m/${trackId}`);
   revalidatePath(`/tracks/${trackId}`);
+  revalidatePath(`/focus/${trackId}`);
   revalidatePath("/");
   revalidatePath("/calendar");
   revalidatePath("/sessions");
