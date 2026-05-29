@@ -123,7 +123,7 @@ src/
     data/{tracks,versions}.ts
     recommend.ts             Scoring engine
     types.ts                 Domain types + helpers
-    database.types.ts        Generated from Supabase schema
+    database.types.ts        Supabase schema types (hand-maintained)
 supabase/
   migrations/                SQL migrations
 ```
