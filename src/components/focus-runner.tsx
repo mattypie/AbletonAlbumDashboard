@@ -2,16 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Pause, Play, Square, Check } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowLeft, Pause, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  SessionLogDialog,
-  type SessionDraft,
-} from "@/components/session-log-dialog";
-import { SessionCompleteDialog } from "@/components/calendar/session-complete-dialog";
 import { SessionTodoChecklist } from "@/components/calendar/session-todo-checklist";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { useFocusSession } from "@/components/focus-session-provider";
@@ -28,7 +23,6 @@ export function FocusRunner({
   plannedSession,
   sessionType,
   sessionTypes,
-  tracks,
   trackTodos,
 }: {
   track: TrackRow | null;
@@ -41,7 +35,6 @@ export function FocusRunner({
 }) {
   const router = useRouter();
   const ctx = useFocusSession();
-  const [logOpen, setLogOpen] = useState(false);
 
   // This page "owns" the running session when its track matches (track mode)
   // or when the active session has no track (track-less mode).
@@ -50,14 +43,14 @@ export function FocusRunner({
   const isOtherSessionActive =
     (ctx.phase === "running" || ctx.phase === "paused") && !pageOwnsSession;
 
-  // Open the log dialog automatically the moment this page's session stops.
+  // The moment this page's session stops, send the user to the full-screen
+  // production-logging page. The FocusSessionProvider lives in the root layout,
+  // so its state survives this client navigation.
   useEffect(() => {
     if (pageOwnsSession && ctx.phase === "stopped") {
-      /* eslint-disable react-hooks/set-state-in-effect */
-      setLogOpen(true);
-      /* eslint-enable react-hooks/set-state-in-effect */
+      router.push("/focus/log");
     }
-  }, [pageOwnsSession, ctx.phase]);
+  }, [pageOwnsSession, ctx.phase, router]);
 
   const activeFocusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
 
@@ -108,23 +101,6 @@ export function FocusRunner({
       initialTodos,
     });
   };
-
-  const draft: SessionDraft | null =
-    phase === "stopped"
-      ? (() => {
-          const totalMs = ctx.accumulatedMs;
-          const ended = new Date();
-          const started = new Date(ended.getTime() - totalMs);
-          return {
-            startedAt: started.toISOString(),
-            endedAt: ended.toISOString(),
-            durationSeconds: Math.round(totalMs / 1000),
-          };
-        })()
-      : null;
-
-  const useEnhancedDialog =
-    !!sessionTypes && !!tracks && (!!plannedSession || !track);
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10 text-center">
@@ -222,58 +198,12 @@ export function FocusRunner({
           </>
         )}
         {phase === "stopped" && (
-          <>
-            <Button size="lg" variant="outline" onClick={() => setLogOpen(true)}>
-              <Check className="h-5 w-5" />
-              Open log
-            </Button>
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => {
-                setLogOpen(false);
-                ctx.reset();
-              }}
-            >
-              Reset
-            </Button>
-          </>
+          <Button size="lg" onClick={() => router.push("/focus/log")}>
+            <Square className="h-5 w-5" />
+            Log session
+          </Button>
         )}
       </div>
-
-      {useEnhancedDialog ? (
-        <SessionCompleteDialog
-          open={logOpen}
-          onOpenChange={setLogOpen}
-          session={plannedSession ?? null}
-          draft={draft}
-          sessionTypes={sessionTypes!}
-          tracks={tracks!}
-          initialSessionTypeId={sessionType?.id ?? ctx.sessionTypeId ?? null}
-          initialTrackId={track?.id ?? null}
-          initialTodos={track ? undefined : todos}
-          initialNotes={notes}
-          onCompleted={() => {
-            setLogOpen(false);
-            ctx.reset();
-          }}
-          redirectTo={track ? "/calendar" : "/sessions"}
-        />
-      ) : track ? (
-        <SessionLogDialog
-          open={logOpen}
-          onOpenChange={setLogOpen}
-          trackId={track.id}
-          primaryAction={primaryAction}
-          draft={draft}
-          notes={notes}
-          onCompleted={() => {
-            setLogOpen(false);
-            ctx.reset();
-          }}
-          redirectTo="/"
-        />
-      ) : null}
     </div>
   );
 }
