@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useFocusSession } from "@/components/focus-session-provider";
+import { useToast } from "@/components/toast";
 import { completeSession } from "@/app/actions/sessions";
 import {
   PRODUCTION_ACTIVITIES,
@@ -43,6 +44,7 @@ export function SessionLogPage({
   const ctx = useFocusSession();
   const [pending, startTx] = useTransition();
   const [settled, setSettled] = useState(false);
+  const { toast } = useToast();
 
   // Freeze the start/end window once, when the page first has a session, so the
   // displayed "Started" time and the saved start/end don't drift on re-render.
@@ -53,6 +55,7 @@ export function SessionLogPage({
   });
 
   const [activities, setActivities] = useState<ActivityState>(EMPTY_ACTIVITIES);
+  const [goalAchieved, setGoalAchieved] = useState<boolean | null>(null);
   const [progressImpact, setProgressImpact] = useState<number | null>(null);
   const [enjoyment, setEnjoyment] = useState<number | null>(null);
   const [generalNote, setGeneralNote] = useState(() => ctx.notes ?? "");
@@ -96,6 +99,29 @@ export function SessionLogPage({
 
   const resetActivities = () => setActivities(EMPTY_ACTIVITIES);
 
+  // One-tap logging: assign the whole session to a single activity. The grid
+  // below stays available for fine-tuning longer sessions.
+  const applyPreset = (key: ProductionActivityKey) => {
+    const minutes = Math.max(1, sessionMinutes);
+    setActivities((prev) => {
+      const next = { ...prev };
+      PRODUCTION_ACTIVITIES.forEach((a) => {
+        next[a.key] = {
+          ...next[a.key],
+          minutes: a.key === key ? minutes : 0,
+        };
+      });
+      return next;
+    });
+  };
+
+  const presetKey = useMemo(() => {
+    const nonZero = PRODUCTION_ACTIVITIES.filter(
+      (a) => activities[a.key].minutes > 0,
+    );
+    return nonZero.length === 1 ? nonZero[0].key : null;
+  }, [activities]);
+
   const autoBalance = () => {
     const active = PRODUCTION_ACTIVITIES.filter(
       (a) => activities[a.key].minutes > 0,
@@ -128,6 +154,18 @@ export function SessionLogPage({
   };
 
   const save = () => {
+    // No dedicated column for the goal yet — record it (and whether it was
+    // reached) at the top of the session notes so it shows up in history.
+    const goal = ctx.goal.trim();
+    const goalLine = goal
+      ? `**Goal:** ${goal}${
+          goalAchieved == null ? "" : goalAchieved ? " — reached" : " — not reached"
+        }`
+      : null;
+    const notesMd = [goalLine, generalNote.trim()]
+      .filter(Boolean)
+      .join("\n\n");
+
     startTx(async () => {
       try {
         await completeSession({
@@ -136,7 +174,7 @@ export function SessionLogPage({
           sessionTypeId: ctx.sessionTypeId,
           startedAt: timeWindow.startedAt.toISOString(),
           endedAt: timeWindow.endedAt.toISOString(),
-          notesMd: generalNote,
+          notesMd,
           enjoymentRating: enjoyment,
           progressImpact,
           activities: PRODUCTION_ACTIVITIES.map((a) => ({
@@ -159,7 +197,7 @@ export function SessionLogPage({
         router.push(track ? `/tracks/${track.id}` : "/");
         router.refresh();
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -216,14 +254,44 @@ export function SessionLogPage({
         ended
       />
 
+      {/* Goal check */}
+      {ctx.goal.trim() && (
+        <Card className="p-5">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Session goal
+          </div>
+          <p className="mt-1 text-sm font-medium">{ctx.goal}</p>
+          <div className="mt-3 flex gap-2">
+            <Button
+              size="sm"
+              variant={goalAchieved === true ? "default" : "outline"}
+              onClick={() =>
+                setGoalAchieved(goalAchieved === true ? null : true)
+              }
+            >
+              Reached it
+            </Button>
+            <Button
+              size="sm"
+              variant={goalAchieved === false ? "accent" : "outline"}
+              onClick={() =>
+                setGoalAchieved(goalAchieved === false ? null : false)
+              }
+            >
+              Not yet
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Time allocation */}
       <Card className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">How did you spend your time?</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {contextLabel} · Add time to the activities below. Use + / − for 5
-              min increments or enter time manually.
+              {contextLabel} · Tap what you mostly did, or break it down in
+              detail below.
             </p>
           </div>
           <Button
@@ -236,6 +304,21 @@ export function SessionLogPage({
             Reset All
           </Button>
         </div>
+
+        {/* One-tap presets: the fast path for short sessions */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {PRODUCTION_ACTIVITIES.map((a) => (
+            <button key={a.key} type="button" onClick={() => applyPreset(a.key)}>
+              <Badge
+                variant={presetKey === a.key ? "primary" : "default"}
+                className="cursor-pointer"
+              >
+                {a.label}
+              </Badge>
+            </button>
+          ))}
+        </div>
+
         <div className="mt-4">
           <ProductionActivityGrid values={activities} onChange={patchActivity} />
         </div>
